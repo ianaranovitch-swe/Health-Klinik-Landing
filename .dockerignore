@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+docs
+fardig-landningssida-webbcopy.md
+Health-Klinik-Landing.html
+.DS_Store
+Thumbs.db
+agent-transcripts
+.cursor
