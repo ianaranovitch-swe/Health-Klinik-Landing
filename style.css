@@ -68,11 +68,18 @@ a {
 
 .logo {
     font-family: var(--font-display);
-    font-size: 1.55rem;
+    font-size: clamp(1.15rem, 2.5vw, 1.55rem);
     font-weight: 700;
     color: var(--primary);
     text-decoration: none;
     letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Не растягиваем и не схлопываем в 0 — бренд остаётся читаемым */
+    flex: 0 1 auto;
+    min-width: min(11rem, 48%);
+    max-width: calc(100% - 9rem);
 }
 
 .logo span {
@@ -81,6 +88,13 @@ a {
 
 .logo.light {
     color: #fff;
+    /* В футере имя бренда показываем целиком */
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    flex: none;
+    min-width: 0;
+    max-width: none;
 }
 
 .nav-links {
@@ -102,6 +116,7 @@ a {
 }
 
 .nav-cta {
+    flex-shrink: 0;
     background: var(--primary);
     color: white;
     padding: 0.65rem 1.35rem;
@@ -726,6 +741,21 @@ a {
 }
 
 @media (max-width: 640px) {
+    .nav-container {
+        padding: 0 1rem;
+        gap: 0.75rem;
+    }
+
+    .logo {
+        min-width: min(9.5rem, 52%);
+        max-width: calc(100% - 7.5rem);
+    }
+
+    .nav-cta {
+        padding: 0.55rem 1rem;
+        font-size: 0.8rem;
+    }
+
     .section {
         padding: 4rem 0;
     }

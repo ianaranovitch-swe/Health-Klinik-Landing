@@ -1,4 +1,4 @@
-# Health Klinik Landing — Humans Resources
+# Health Klinik Landing — Människans Resurser
 
 Статический лендинг для Monicor & Alfa. Тексты взяты из `fardig-landningssida-webbcopy.md`.
 
