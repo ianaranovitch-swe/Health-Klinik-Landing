@@ -25,11 +25,21 @@ Healthcheck: [http://localhost:8080/health](http://localhost:8080/health)
 
 | Переменная | Обязательно | Пример | Описание |
 |---|---|---|---|
-| `PORT` | да (на Railway задаётся сама) | `8080` | Порт HTTP-сервера Caddy |
+| `PORT` | да (на Railway задаётся сама) | `8080` | Порт HTTP-сервера (пока Caddy; позже FastAPI) |
+| `DATABASE_URL` | да (этап 1) | `postgresql://...` | PostgreSQL на Railway |
 
 Файл-пример: `.env.example`.
 
-Сейчас бэкенда и секретов нет. Позже сюда добавятся переменные для системы бронирования и БД.
+## Бронирование (в разработке)
+
+| Этап | Статус | Документация |
+|---|---|---|
+| 1. База данных | готово | [docs/STAGE1_DATABASE.md](docs/STAGE1_DATABASE.md) |
+| 2. FastAPI | готово | [docs/STAGE2_API.md](docs/STAGE2_API.md) |
+| 3. Форма на лендинге | ждёт | — |
+| 4. Telegram-бот | ждёт | — |
+| 5. Email (Resend) | ждёт | — |
+| 6. Деплой Railway | ждёт | — |
 
 ## Структура
 
