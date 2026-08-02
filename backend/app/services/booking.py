@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.config import Settings
 from app.models import Booking, BookingStatus, Client, Service, Therapist
 from app.schemas.booking import BookingCreateIn, BookingCreateOut, TherapistBookingOut
+from app.services.availability import generate_time_slots
 from app.services.email import notify_booking_created
 
 
@@ -114,6 +115,4 @@ def list_therapist_bookings(
 
 
 def is_valid_slot_time(value: time) -> bool:
-    from app.services.availability import generate_time_slots
-
     return value.strftime("%H:%M") in generate_time_slots()

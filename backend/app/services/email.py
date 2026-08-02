@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import date, time
 
+import resend
+
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -25,8 +27,6 @@ def send_email(to: str, subject: str, html_body: str, settings: Settings) -> boo
         return False
 
     try:
-        import resend
-
         resend.api_key = settings.resend_api_key
         resend.Emails.send(
             {
