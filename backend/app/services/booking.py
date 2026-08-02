@@ -35,12 +35,13 @@ def create_booking(
     if service is None:
         raise ValueError("Услуга не найдена")
 
-    client = db.scalar(select(Client).where(Client.email == str(payload.email)))
+    email_normalized = str(payload.email).lower()
+    client = db.scalar(select(Client).where(Client.email == email_normalized))
     if client is None:
         client = Client(
             name=payload.name.strip(),
             phone=payload.phone.strip(),
-            email=str(payload.email).lower(),
+            email=email_normalized,
         )
         db.add(client)
         db.flush()
