@@ -36,7 +36,7 @@ Healthcheck: [http://localhost:8080/health](http://localhost:8080/health)
 |---|---|---|
 | 1. База данных | готово | [docs/STAGE1_DATABASE.md](docs/STAGE1_DATABASE.md) |
 | 2. FastAPI | готово | [docs/STAGE2_API.md](docs/STAGE2_API.md) |
-| 3. Форма на лендинге | ждёт | — |
+| 3. Форма на лендинге | готово | [docs/STAGE3_BOOKING_FORM.md](docs/STAGE3_BOOKING_FORM.md) |
 | 4. Telegram-бот | ждёт | — |
 | 5. Email (Resend) | готово | [docs/STAGE5_EMAIL.md](docs/STAGE5_EMAIL.md) |
 | 6. Деплой Railway (API+бот) | ждёт | — |

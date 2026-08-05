@@ -10,7 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<!--
+  data-api-base:
+  - "auto" — localhost → http://127.0.0.1:8000, на проде → тот же origin (mrboka.com)
+  - явный URL — например https://api.mrboka.com (без слэша в конце)
+-->
+<body data-api-base="auto">
 
     <!-- Навигация -->
     <nav class="nav">
@@ -239,15 +244,69 @@
         </div>
     </section>
 
-    <!-- SEKTION 11 – SLUTLIG CTA -->
+    <!-- SEKTION 11 – BOKNING -->
     <section class="section section-cta" id="boka">
         <div class="container narrow">
             <h2>Ge din kropp uppmärksamheten den förtjänar</h2>
             <p>Ju tidigare du uppmärksammar kroppens signaler, desto större möjlighet har du att stötta din hälsa i rätt riktning. Boka en tid idag och få en mer individuell bild av vad just din kropp behöver.</p>
-            <div class="hero-cta-group center">
-                <a href="#kontakt" class="btn-primary">Boka tid idag</a>
-                <a href="#kontakt" class="btn-secondary dark">Kontakta oss</a>
+
+            <div id="booking-form-panel" class="booking-panel">
+                <form id="booking-form" class="booking-form" novalidate>
+                    <div class="booking-grid">
+                        <label class="booking-field">
+                            <span>Behandlare</span>
+                            <select id="booking-therapist" name="therapist_id" required>
+                                <option value="">Välj behandlare…</option>
+                            </select>
+                        </label>
+                        <label class="booking-field">
+                            <span>Tjänst</span>
+                            <select id="booking-service" name="service_id" required>
+                                <option value="">Välj tjänst…</option>
+                            </select>
+                        </label>
+                        <label class="booking-field">
+                            <span>Datum</span>
+                            <input type="date" id="booking-date" name="date" required>
+                        </label>
+                        <label class="booking-field">
+                            <span>Tid</span>
+                            <select id="booking-time" name="time" required disabled>
+                                <option value="">Välj datum först…</option>
+                            </select>
+                        </label>
+                        <label class="booking-field">
+                            <span>Namn</span>
+                            <input type="text" id="booking-name" name="name" autocomplete="name" minlength="2" required placeholder="Ditt namn">
+                        </label>
+                        <label class="booking-field">
+                            <span>Telefon</span>
+                            <input type="tel" id="booking-phone" name="phone" autocomplete="tel" minlength="5" required placeholder="07X XXX XX XX">
+                        </label>
+                        <label class="booking-field booking-field-full">
+                            <span>E-post</span>
+                            <input type="email" id="booking-email" name="email" autocomplete="email" required placeholder="namn@exempel.se">
+                        </label>
+                    </div>
+
+                    <p id="booking-error" class="booking-error" hidden></p>
+                    <p id="booking-status" class="booking-status" hidden></p>
+
+                    <div class="booking-actions">
+                        <button type="submit" id="booking-submit" class="btn-primary">Boka tid idag</button>
+                        <a href="#kontakt" class="btn-secondary dark">Kontakta oss</a>
+                    </div>
+                </form>
             </div>
+
+            <div id="booking-success" class="booking-success" hidden>
+                <h3>Tack — din bokning är mottagen</h3>
+                <p id="booking-success-summary" class="booking-success-summary"></p>
+                <p>Bekräfta tiden i Telegram så att vi kan reservera platsen.</p>
+                <a id="booking-telegram-link" class="btn-primary" href="#" target="_blank" rel="noopener noreferrer">Bekräfta i Telegram</a>
+                <button type="button" id="booking-again" class="booking-again">Boka en annan tid</button>
+            </div>
+
             <p class="cta-note">Har du frågor innan du bokar? Hör gärna av dig så berättar vi mer om hur behandlingen går till.</p>
         </div>
     </section>
@@ -266,7 +325,7 @@
                         <li><span>Klinik/Företag</span> Människans Resurser</li>
                         <li><span>Telefon</span> <a href="tel:08334908">08-33 49 08</a></li>
                         <li><span>E-post</span> <a href="mailto:mail@mr-ab.se">mail@mr-ab.se</a></li>
-                        <li><span>Bokning</span> Kommer snart via onlinebokning</li>
+                        <li><span>Bokning</span> <a href="#boka">Onlinebokning</a></li>
                     </ul>
                 </div>
             </div>
@@ -276,5 +335,6 @@
         </div>
     </footer>
 
+    <script src="booking.js" defer></script>
 </body>
 </html>
