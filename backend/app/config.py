@@ -29,8 +29,6 @@ class Settings:
     database_url: str
     bot_username: str = ""
     cors_origins: list[str] = field(default_factory=lambda: ["*"])
-    resend_api_key: str | None = None
-    email_from: str = "bokning@example.com"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -44,8 +42,6 @@ class Settings:
             database_url=normalize_database_url(raw),
             bot_username=(os.getenv("BOT_USERNAME") or "").lstrip("@"),
             cors_origins=_split_origins(os.getenv("CORS_ORIGINS")),
-            resend_api_key=os.getenv("RESEND_API_KEY") or None,
-            email_from=os.getenv("EMAIL_FROM") or "bokning@example.com",
         )
 
 

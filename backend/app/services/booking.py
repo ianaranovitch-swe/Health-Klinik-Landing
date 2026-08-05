@@ -12,7 +12,7 @@ from app.config import Settings
 from app.models import Booking, BookingStatus, Client, Service, Therapist
 from app.schemas.booking import BookingCreateIn, BookingCreateOut, TherapistBookingOut
 from app.services.availability import generate_time_slots
-from app.services.email import notify_booking_created
+from app.services.email_service import notify_booking_created
 
 
 def build_telegram_deep_link(bot_username: str, token: uuid.UUID) -> str:
@@ -66,9 +66,8 @@ def create_booking(
 
     deep_link = build_telegram_deep_link(settings.bot_username, token)
 
-    # Письма не должны ломать создание записи
+    # Письма не должны ломать создание записи (ошибки email только в лог)
     notify_booking_created(
-        settings=settings,
         client_name=client.name,
         client_email=client.email,
         client_phone=client.phone,

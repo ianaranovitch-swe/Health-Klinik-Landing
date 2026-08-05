@@ -49,11 +49,10 @@ uvicorn app.main:app --reload --port 8000
 Ответ содержит `telegram_deep_link` вида  
 `https://t.me/BOTNAME?start=confirm_<uuid>`.
 
-## Email на этом этапе
+## Email
 
-- Вызов писем уже есть после `commit`.
-- Если нет `RESEND_API_KEY` — письмо пропускается, запись всё равно создаётся.
-- Красивые шаблоны — этап 5.
+Полная интеграция Resend — см. [STAGE5_EMAIL.md](STAGE5_EMAIL.md).  
+После `commit` вызывается `notify_booking_created()`; без `RESEND_API_KEY` письма только логируются.
 
 ## Переменные
 
