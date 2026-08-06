@@ -24,19 +24,27 @@
   const telegramLink = document.getElementById("booking-telegram-link");
   const againBtn = document.getElementById("booking-again");
 
+  // Прод-API, когда лендинг и FastAPI на разных хостах (Railway).
+  // Локально при data-api-base="auto" не используется.
+  const PROD_API_BASE =
+    "https://industrious-exploration-production-512f.up.railway.app";
+  const PROD_HOSTS = new Set(["mrboka.com", "www.mrboka.com"]);
+
   function resolveApiBase() {
     const raw = (document.body.getAttribute("data-api-base") || "auto").trim();
     if (raw && raw !== "auto") {
       return raw.replace(/\/$/, "");
     }
-    // auto: локальная разработка → uvicorn на :8000; прод → same-origin
+    // auto: localhost → uvicorn :8000; известный прод-хост → PROD_API_BASE; иначе same-origin
     const host = window.location.hostname;
     const isLocal =
       host === "localhost" ||
       host === "127.0.0.1" ||
       host === "[::1]" ||
       host === "";
-    return isLocal ? "http://127.0.0.1:8000" : "";
+    if (isLocal) return "http://127.0.0.1:8000";
+    if (PROD_HOSTS.has(host)) return PROD_API_BASE;
+    return "";
   }
 
   const apiBase = resolveApiBase();

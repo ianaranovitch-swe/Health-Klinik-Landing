@@ -16,10 +16,10 @@
    uvicorn app.main:app --reload --port 8000
    ```
 2. Открой лендинг (Live Server / просто `index.html`).
-3. В `index.html` по умолчанию: `data-api-base="auto"`  
-   - на localhost форма ходит на `http://127.0.0.1:8000`  
-   - на mrboka.com — на тот же origin (когда API отдаёт сайт)  
-   - для отдельного API-хоста: `data-api-base="https://YOUR-API.up.railway.app"`
+3. В `index.html` по умолчанию: `data-api-base="auto"` (не меняй для локалки)  
+   - на localhost → `http://127.0.0.1:8000`  
+   - на mrboka.com / www → `PROD_API_BASE` в `booking.js` (отдельный Railway API)  
+   - другой API-хост только при необходимости: явный `data-api-base="https://…"`
 4. В `.env` backend:
    ```env
    CORS_ORIGINS=http://127.0.0.1:5500,http://localhost:5500,http://127.0.0.1:8000,https://mrboka.com
@@ -28,10 +28,10 @@
 
 ## Прод (mrboka.com)
 
-Пока API не задеплоен, форма на проде не подключится к backend. После этапа 6:
+После этапа 6:
 
-1. Если FastAPI отдаёт и лендинг, и `/api` — оставь `data-api-base="auto"`.
-2. Если API на другом URL — укажи его явно в `data-api-base`.
+1. Оставь `data-api-base="auto"` — на mrboka.com подставится `PROD_API_BASE` из `booking.js`.
+2. Если сменится публичный URL API — обнови константу `PROD_API_BASE` в `booking.js` (не `index.html`).
 3. Добавь `https://mrboka.com` в `CORS_ORIGINS` на API-сервисе.
 
 ## Зависимости

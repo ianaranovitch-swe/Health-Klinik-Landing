@@ -12,11 +12,11 @@
 </head>
 <!--
   data-api-base:
-  - "auto" — localhost → http://127.0.0.1:8000, иначе тот же origin
-  - явный URL API (без /health и без слэша в конце)
-  Локально: data-api-base="auto" или http://127.0.0.1:8000
+  - "auto" (по умолчанию) — localhost → http://127.0.0.1:8000;
+    mrboka.com → URL из booking.js (PROD_API_BASE); иначе same-origin
+  - явный URL — только если нужен другой API-хост (без /health, без слэша в конце)
 -->
-<body data-api-base="https://industrious-exploration-production-512f.up.railway.app">
+<body data-api-base="auto">
 
     <!-- Навигация -->
     <nav class="nav">
