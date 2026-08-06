@@ -17,7 +17,8 @@ API должен смотреть **только в папку `backend`**.
 | Поле | Значение |
 |---|---|
 | Root Directory | `backend` |
-| Start Command (если пусто) | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Start Command (если задаёшь вручную) | `sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'` |
+| Или оставь пустым | возьмётся из `backend/railway.toml` / Dockerfile |
 
 Variables:
 - `DATABASE_URL` = reference на Postgres
