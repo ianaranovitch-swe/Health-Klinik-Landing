@@ -397,17 +397,18 @@
             <div id="booking-form-panel" class="booking-panel">
                 <form id="booking-form" class="booking-form" novalidate>
                     <div class="booking-grid">
-                        <label class="booking-field">
-                            <span>Behandlare</span>
-                            <select id="booking-therapist" name="therapist_id" required>
-                                <option value="">Välj behandlare…</option>
+                        <label class="booking-field booking-field-full">
+                            <span>1. Diagnostik / tjänst</span>
+                            <select id="booking-service" name="service_id" required>
+                                <option value="">Välj undersökning…</option>
                             </select>
                         </label>
-                        <label class="booking-field">
-                            <span>Tjänst</span>
-                            <select id="booking-service" name="service_id" required>
-                                <option value="">Välj tjänst…</option>
+                        <label class="booking-field booking-field-full">
+                            <span>2. Behandlare</span>
+                            <select id="booking-therapist" name="therapist_id" required disabled>
+                                <option value="">Välj tjänst först…</option>
                             </select>
+                            <small id="booking-therapist-hint" class="booking-hint" hidden></small>
                         </label>
                         <label class="booking-field">
                             <span>Datum</span>

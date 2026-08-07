@@ -24,6 +24,8 @@
   const telegramLink = document.getElementById("booking-telegram-link");
   const againBtn = document.getElementById("booking-again");
 
+  const therapistHint = document.getElementById("booking-therapist-hint");
+
   // Прод-API, когда лендинг и FastAPI на разных хостах (Railway).
   // Локально при data-api-base="auto" не используется.
   const PROD_API_BASE =
@@ -131,39 +133,118 @@
     }
   }
 
+  /** Группа в списке услуг: Alfa / Monicor / EIS / Paket */
+  function serviceGroupLabel(name) {
+    const n = String(name || "").toLowerCase();
+    if (n.includes("paket")) return "Paket";
+    if (n.includes("eis")) return "EIS";
+    if (n.includes("monicor")) return "Monicor";
+    if (n.includes("alfa")) return "Alfa";
+    return "Övrigt";
+  }
+
+  const SERVICE_GROUP_ORDER = ["Alfa", "Monicor", "EIS", "Paket", "Övrigt"];
+
+  function fillServicesGrouped(select, services) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Välj undersökning…";
+    select.innerHTML = "";
+    select.appendChild(placeholder);
+
+    const groups = new Map();
+    for (const svc of services) {
+      const key = serviceGroupLabel(svc.name);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(svc);
+    }
+
+    for (const key of SERVICE_GROUP_ORDER) {
+      const items = groups.get(key);
+      if (!items || items.length === 0) continue;
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = key;
+      for (const svc of items) {
+        const opt = document.createElement("option");
+        opt.value = String(svc.id);
+        opt.textContent = `${svc.name} — ${svc.duration_minutes} min · ${formatPriceSek(svc.price)}`;
+        optgroup.appendChild(opt);
+      }
+      select.appendChild(optgroup);
+    }
+  }
+
+  function setTherapistHint(message) {
+    if (!therapistHint) return;
+    if (!message) {
+      therapistHint.hidden = true;
+      therapistHint.textContent = "";
+      return;
+    }
+    therapistHint.hidden = false;
+    therapistHint.textContent = message;
+  }
+
+  async function loadServices() {
+    const services = await fetchJson("/api/services");
+    fillServicesGrouped(serviceSelect, services);
+    serviceSelect.disabled = false;
+  }
+
   async function loadTherapists() {
-    const therapists = await fetchJson("/api/therapists");
+    const serviceId = serviceSelect.value;
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    therapistSelect.innerHTML = "";
+    therapistSelect.appendChild(placeholder);
+
+    if (!serviceId) {
+      placeholder.textContent = "Välj tjänst först…";
+      therapistSelect.disabled = true;
+      setTherapistHint("");
+      return;
+    }
+
+    placeholder.textContent = "Laddar behandlare…";
+    therapistSelect.disabled = true;
+
+    const therapists = await fetchJson(
+      `/api/therapists?service_id=${encodeURIComponent(serviceId)}`
+    );
+
+    therapistSelect.innerHTML = "";
+    const choose = document.createElement("option");
+    choose.value = "";
+    choose.textContent =
+      therapists.length === 0 ? "Ingen behandlare för denna tjänst" : "Välj behandlare…";
+    therapistSelect.appendChild(choose);
+
     fillSelect(therapistSelect, therapists, (t) => ({
       value: String(t.id),
       label: `${t.name} — ${t.specialization}`,
     }));
-  }
 
-  async function loadServices() {
-    const therapistId = therapistSelect.value;
-    const first = serviceSelect.options[0];
-    serviceSelect.innerHTML = "";
-    if (first) {
-      first.value = "";
-      first.textContent = therapistId
-        ? "Välj tjänst…"
-        : "Välj behandlare först…";
-      serviceSelect.appendChild(first);
-    }
-
-    if (!therapistId) {
-      serviceSelect.disabled = true;
+    if (therapists.length === 0) {
+      therapistSelect.disabled = true;
+      setTherapistHint(
+        "Den här undersökningen kan just nu bara bokas med en annan tjänst eller kontakta oss."
+      );
       return;
     }
 
-    const services = await fetchJson(
-      `/api/services?therapist_id=${encodeURIComponent(therapistId)}`
-    );
-    fillSelect(serviceSelect, services, (s) => ({
-      value: String(s.id),
-      label: `${s.name} — ${s.duration_minutes} min · ${formatPriceSek(s.price)}`,
-    }));
-    serviceSelect.disabled = false;
+    therapistSelect.disabled = false;
+
+    // Один terapeut (t.ex. EIS → bara Viktoria): välj automatiskt
+    if (therapists.length === 1) {
+      therapistSelect.value = String(therapists[0].id);
+      setTherapistHint(
+        `${therapists[0].name} tar emot den här undersökningen.`
+      );
+    } else {
+      setTherapistHint(
+        "Iwona: Monicor & Alfa. Viktoria: Monicor, Alfa & EIS."
+      );
+    }
   }
 
   async function loadSlots() {
@@ -226,8 +307,8 @@
 
     showStatus("Laddar formulär…");
     try {
-      await loadTherapists();
       await loadServices();
+      await loadTherapists();
       showStatus("");
       await loadSlots();
     } catch (err) {
@@ -239,15 +320,20 @@
     }
   }
 
-  therapistSelect.addEventListener("change", async () => {
+  serviceSelect.addEventListener("change", async () => {
     try {
-      await loadServices();
+      await loadTherapists();
       await loadSlots();
     } catch (err) {
-      showError("Kunde inte ladda tjänster för vald behandlare.");
+      showError("Kunde inte ladda behandlare för vald tjänst.");
       console.error(err);
     }
   });
+
+  therapistSelect.addEventListener("change", () => {
+    loadSlots();
+  });
+
   dateInput.addEventListener("change", () => {
     if (dateInput.value && isWeekendISO(dateInput.value)) {
       showError("Bokning endast måndag–fredag (lördag/söndag stängt).");
@@ -355,6 +441,7 @@
     showStatus("");
     try {
       await loadServices();
+      await loadTherapists();
       await loadSlots();
     } catch (err) {
       console.error(err);

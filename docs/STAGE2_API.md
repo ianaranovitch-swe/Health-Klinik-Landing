@@ -6,7 +6,9 @@
 |---|---|---|
 | GET | `/health` | живость |
 | GET | `/api/therapists` | активные терапевты |
+| GET | `/api/therapists?service_id=` | кто оказывает эту услугу |
 | GET | `/api/services` | услуги |
+| GET | `/api/services?therapist_id=` | услуги выбранного терапевта |
 | GET | `/api/availability?therapist_id=&date=YYYY-MM-DD` | пн–чт 11–18, пт 11–17 / 30 мин; сб–вс пусто |
 | POST | `/api/bookings` | создать запись + deep-link |
 | GET | `/api/bookings/therapist/{id}` | записи терапевта |

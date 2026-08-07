@@ -907,6 +907,14 @@ a {
     border: 2px solid rgba(26, 95, 74, 0.35);
 }
 
+.booking-hint {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.72);
+}
+
 .booking-error {
     margin-top: 1rem;
     padding: 0.85rem 1rem;

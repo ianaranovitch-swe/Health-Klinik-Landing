@@ -20,6 +20,8 @@
    - на localhost → `http://127.0.0.1:8000`  
    - на mrboka.com / www → `PROD_API_BASE` в `booking.js` (отдельный Railway API)  
    - другой API-хост только при необходимости: явный `data-api-base="https://…"`
+4. Порядок в форме: **сначала tjänst/diagnostik**, затем **behandlare** (только те, кто умеет услугу).  
+   EIS → только Viktoria; Monicor/Alfa → Iwona и Viktoria. Если терапевт один — выбирается сам.
 4. В `.env` backend:
    ```env
    CORS_ORIGINS=http://127.0.0.1:5500,http://localhost:5500,http://127.0.0.1:8000,https://mrboka.com
