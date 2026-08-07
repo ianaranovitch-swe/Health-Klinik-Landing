@@ -21,6 +21,9 @@
 	encode gzip
 	file_server
 
+	# Не кэшируем HTML/JS/CSS надолго (Cloudflare иначе держит старую форму 4ч)
+	header Cache-Control "no-cache, must-revalidate"
+
 	# Простая проверка живости сервиса
 	handle /health {
 		respond "ok" 200

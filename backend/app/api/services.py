@@ -22,17 +22,23 @@ def list_services(
         description="Если задан — только услуги этого терапевта",
     ),
 ) -> list[Service]:
-    """Список услуг (опционально отфильтрованный по терапевту)."""
-    if therapist_id is None:
-        stmt = select(Service).order_by(Service.name.asc())
-        return list(db.scalars(stmt).all())
+    """Список услуг (только с привязанным активным терапевтом, если без фильтра)."""
+    if therapist_id is not None:
+        therapist = db.scalar(
+            select(Therapist)
+            .options(selectinload(Therapist.services))
+            .where(Therapist.id == therapist_id)
+        )
+        if therapist is None or not therapist.active:
+            raise HTTPException(
+                status_code=404, detail="Терапевт не найден или неактивен"
+            )
+        return sorted(therapist.services, key=lambda s: s.name)
 
-    therapist = db.scalar(
-        select(Therapist)
-        .options(selectinload(Therapist.services))
-        .where(Therapist.id == therapist_id)
+    # В форме бронирования не показываем «сиротские» услуги без terapeutа
+    stmt = (
+        select(Service)
+        .where(Service.therapists.any(Therapist.active.is_(True)))
+        .order_by(Service.name.asc())
     )
-    if therapist is None or not therapist.active:
-        raise HTTPException(status_code=404, detail="Терапевт не найден или неактивен")
-
-    return sorted(therapist.services, key=lambda s: s.name)
+    return list(db.scalars(stmt).unique().all())

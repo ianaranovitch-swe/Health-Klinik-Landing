@@ -3,7 +3,8 @@
 ## Что сделано
 
 - Секция `#boka` заменена на форму: behandlare, tjänst, datum, tid, namn, telefon, e-post
-- `booking.js` загружает данные из API и отправляет `POST /api/bookings`
+- `booking-form.js` загружает данные из API и отправляет `POST /api/bookings`  
+  (старый `booking.js` оставлен как копия; страница подключает `booking-form.js`)
 - После успеха — экран с кнопкой **Bekräfta i Telegram** (deep-link из ответа)
 - Стили в `style.css` на существующих CSS-переменных
 

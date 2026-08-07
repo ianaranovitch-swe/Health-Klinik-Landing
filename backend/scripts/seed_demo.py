@@ -154,7 +154,11 @@ def _sync_services(session: Session) -> dict[str, Service]:
             session.delete(svc)
             print(f"Удалена устаревшая услуга: {svc.name}")
         else:
-            print(f"Оставлена устаревшая услуга (есть записи): {svc.name}")
+            # Сохраняем запись для истории броней; убираем из формы (без terapeutов)
+            svc.therapists = []
+            print(
+                f"Оставлена устаревшая услуга (есть записи), снята с terapeutов: {svc.name}"
+            )
     return by_name
 
 
