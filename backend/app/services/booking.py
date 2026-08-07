@@ -114,5 +114,6 @@ def list_therapist_bookings(
     return [TherapistBookingOut.from_booking(b) for b in bookings]
 
 
-def is_valid_slot_time(value: time) -> bool:
-    return value.strftime("%H:%M") in generate_time_slots()
+def is_valid_slot_time(value: time, on_date: date) -> bool:
+    """Проверка: день открыт и время есть в списке слотов."""
+    return value.strftime("%H:%M") in generate_time_slots(on_date)

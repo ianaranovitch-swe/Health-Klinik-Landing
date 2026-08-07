@@ -5,6 +5,7 @@ WORKDIR /app
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY index.html style.css booking.js /srv/
+COPY bilder /srv/bilder
 
 # Railway задаёт PORT; по умолчанию 8080 для локального запуска
 ENV PORT=8080

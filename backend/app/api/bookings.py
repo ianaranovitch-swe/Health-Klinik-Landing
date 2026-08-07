@@ -18,10 +18,13 @@ def create_booking_endpoint(
     settings: AppSettings,
 ) -> BookingCreateOut:
     """Создать запись, отправить письма, вернуть Telegram deep-link."""
-    if not is_valid_slot_time(payload.time):
+    if not is_valid_slot_time(payload.time, payload.date):
         raise HTTPException(
             status_code=400,
-            detail="Недопустимое время. Доступны слоты 09:00–17:00 с шагом 1.5 часа.",
+            detail=(
+                "Недопустимое время. Доступны: пн–чт 11:00–18:00, "
+                "пт 11:00–17:00 (шаг 30 мин). Сб–вс закрыто."
+            ),
         )
     try:
         return create_booking(db, payload, settings)

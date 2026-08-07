@@ -63,12 +63,43 @@
     statusEl.textContent = message || "";
   }
 
-  function todayISO() {
-    const d = new Date();
+  function toISODate(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  }
+
+  function todayISO() {
+    return toISODate(new Date());
+  }
+
+  /** Локальный день недели для YYYY-MM-DD (0=вс … 6=сб). */
+  function weekdayOfISO(iso) {
+    const d = new Date(`${iso}T12:00:00`);
+    return d.getDay();
+  }
+
+  function isWeekendISO(iso) {
+    const day = weekdayOfISO(iso);
+    return day === 0 || day === 6;
+  }
+
+  /** Ближайший будний день (пн–пт) начиная с сегодня. */
+  function nextOpenDayISO() {
+    const d = new Date();
+    for (let i = 0; i < 8; i += 1) {
+      const iso = toISODate(d);
+      if (!isWeekendISO(iso)) return iso;
+      d.setDate(d.getDate() + 1);
+    }
+    return todayISO();
+  }
+
+  function formatPriceSek(value) {
+    const n = Number(value);
+    if (Number.isNaN(n)) return "";
+    return `${n.toLocaleString("sv-SE")} kr`;
   }
 
   function formatTimeForApi(slot) {
@@ -112,7 +143,7 @@
     const services = await fetchJson("/api/services");
     fillSelect(serviceSelect, services, (s) => ({
       value: String(s.id),
-      label: `${s.name} (${s.duration_minutes} min)`,
+      label: `${s.name} — ${s.duration_minutes} min · ${formatPriceSek(s.price)}`,
     }));
   }
 
@@ -172,7 +203,7 @@
 
   async function init() {
     dateInput.min = todayISO();
-    if (!dateInput.value) dateInput.value = todayISO();
+    dateInput.value = nextOpenDayISO();
 
     showStatus("Laddar formulär…");
     try {
@@ -192,6 +223,12 @@
     loadSlots();
   });
   dateInput.addEventListener("change", () => {
+    if (dateInput.value && isWeekendISO(dateInput.value)) {
+      showError("Bokning endast måndag–fredag (lördag/söndag stängt).");
+      dateInput.value = nextOpenDayISO();
+    } else {
+      showError("");
+    }
     loadSlots();
   });
 
@@ -287,7 +324,7 @@
     formPanel.hidden = false;
     form.reset();
     dateInput.min = todayISO();
-    dateInput.value = todayISO();
+    dateInput.value = nextOpenDayISO();
     showError("");
     showStatus("");
     loadSlots();

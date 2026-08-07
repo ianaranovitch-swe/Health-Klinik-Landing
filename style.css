@@ -67,34 +67,57 @@ a {
 }
 
 .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
     font-family: var(--font-display);
-    font-size: clamp(1.15rem, 2.5vw, 1.55rem);
+    font-size: clamp(1.05rem, 2.3vw, 1.45rem);
     font-weight: 700;
     color: var(--primary);
     text-decoration: none;
     letter-spacing: 0.01em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     /* Не растягиваем и не схлопываем в 0 — бренд остаётся читаемым */
     flex: 0 1 auto;
-    min-width: min(11rem, 48%);
+    min-width: min(12rem, 52%);
     max-width: calc(100% - 9rem);
 }
 
-.logo span {
+.logo-mark {
+    width: 2.75rem;
+    height: 2.75rem;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
+}
+
+.logo-text {
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.logo-text em {
+    font-style: normal;
     color: var(--accent);
 }
 
 .logo.light {
     color: #fff;
-    /* В футере имя бренда показываем целиком */
     overflow: visible;
-    text-overflow: unset;
-    white-space: normal;
     flex: none;
     min-width: 0;
     max-width: none;
+}
+
+.logo.light .logo-text {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+
+.logo.light .logo-text em {
+    color: var(--accent-light);
 }
 
 .nav-links {
@@ -402,37 +425,113 @@ a {
     max-width: 720px;
 }
 
-/* Двухколоночный блок Monicor */
-.split {
+/* Метод: текст + фото (без карточек) */
+.method-layout {
     display: grid;
-    grid-template-columns: 1.4fr 0.9fr;
-    gap: 3rem;
-    align-items: start;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 2.75rem;
+    align-items: center;
 }
 
-.fact-box {
-    background: var(--bg-green);
-    border-left: 4px solid var(--primary);
-    padding: 1.75rem 1.5rem;
-    border-radius: 0 16px 16px 0;
-    position: sticky;
-    top: 100px;
-    animation: fadeUp 1s ease 0.15s both;
+.method-layout.reverse {
+    grid-template-columns: 0.9fr 1.1fr;
 }
 
-.fact-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--primary);
-    margin-bottom: 0.75rem;
+.method-layout.reverse .method-copy {
+    order: 2;
 }
 
-.fact-box p:last-child {
+.method-layout.reverse .method-visual {
+    order: 1;
+}
+
+.method-copy h2 {
+    margin-bottom: 1.25rem;
+}
+
+.method-visual {
+    margin: 0;
+    min-width: 0;
+}
+
+.method-visual img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(28rem, 70vh);
+    object-fit: contain;
+    object-position: center;
+}
+
+.method-note {
+    margin-top: 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--text-muted);
+    max-width: 40rem;
+}
+
+/* Прайс */
+.price-block {
+    margin-bottom: 2.25rem;
+}
+
+.price-block h3 {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 1rem;
+}
+
+.price-list {
+    list-style: none;
+    border-top: 1px solid var(--border);
+}
+
+.price-list li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem 1.25rem;
+    align-items: baseline;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.price-name {
     color: var(--text);
-    font-size: 1.08rem;
-    line-height: 1.7;
+    font-size: 1.02rem;
+    line-height: 1.45;
+}
+
+.price-name em {
+    display: block;
+    font-style: normal;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.price-meta {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    white-space: nowrap;
+}
+
+.price-amount {
+    font-weight: 700;
+    color: var(--primary-dark);
+    font-size: 1.05rem;
+    white-space: nowrap;
+    text-align: right;
+    min-width: 5.5rem;
+}
+
+.price-hours {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
 }
 
 /* Fördelar */
@@ -871,13 +970,31 @@ a {
         display: none;
     }
 
-    .split {
+    .method-layout,
+    .method-layout.reverse {
         grid-template-columns: 1fr;
-        gap: 2rem;
+        gap: 1.75rem;
     }
 
-    .fact-box {
-        position: static;
+    .method-layout.reverse .method-copy,
+    .method-layout.reverse .method-visual {
+        order: initial;
+    }
+
+    .price-list li {
+        grid-template-columns: 1fr auto;
+        gap: 0.35rem 1rem;
+    }
+
+    .price-meta {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .price-amount {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
     }
 
     .check-list.two-col,
@@ -904,8 +1021,17 @@ a {
     }
 
     .logo {
-        min-width: min(9.5rem, 52%);
+        min-width: min(10rem, 58%);
         max-width: calc(100% - 7.5rem);
+    }
+
+    .logo-mark {
+        width: 2.35rem;
+        height: 2.35rem;
+    }
+
+    .logo-text {
+        font-size: 0.98rem;
     }
 
     .nav-cta {
