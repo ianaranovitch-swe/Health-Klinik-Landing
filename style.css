@@ -449,6 +449,12 @@ a {
     margin-bottom: 1.25rem;
 }
 
+.method-visuals {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
 .method-visual {
     margin: 0;
     min-width: 0;
@@ -463,12 +469,96 @@ a {
     object-position: center;
 }
 
+.method-visuals .method-visual img {
+    max-height: min(18rem, 50vh);
+}
+
 .method-note {
     margin-top: 1.25rem;
     font-size: 0.95rem;
     line-height: 1.65;
     color: var(--text-muted);
     max-width: 40rem;
+}
+
+/* Behandlare */
+.team-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.team-member {
+    display: grid;
+    gap: 1.25rem;
+    align-content: start;
+}
+
+.team-photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    max-height: 22rem;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.team-photo-placeholder {
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(201, 162, 39, 0.22), transparent 55%),
+        linear-gradient(160deg, var(--bg-green), #d9ebe3);
+    color: var(--primary-dark);
+}
+
+.team-photo-placeholder span {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.team-body h3 {
+    font-family: var(--font-display);
+    font-size: 1.65rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 0.25rem;
+}
+
+.team-role {
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+}
+
+.team-body > p {
+    color: var(--text);
+    line-height: 1.65;
+}
+
+.team-methods {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0 0.75rem;
+}
+
+.team-methods li {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    border-bottom: 2px solid var(--accent);
+    padding: 0.15rem 0;
+}
+
+.team-note {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 /* Прайс */
@@ -977,8 +1067,14 @@ a {
     }
 
     .method-layout.reverse .method-copy,
-    .method-layout.reverse .method-visual {
+    .method-layout.reverse .method-visual,
+    .method-layout.reverse .method-visuals {
         order: initial;
+    }
+
+    .team-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
     }
 
     .price-list li {

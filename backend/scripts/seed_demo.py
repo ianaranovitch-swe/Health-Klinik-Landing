@@ -1,4 +1,9 @@
-"""Демо-данные и актуальный каталог услуг: python -m scripts.seed_demo"""
+"""Демо-данные и каталог: python -m scripts.seed_demo
+
+Два терапевта:
+- Iwona — Alfa + Monicor
+- Viktoria — Alfa + Monicor + EIS
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -18,82 +24,226 @@ load_dotenv(ROOT / ".env")
 from app.db import get_session_factory  # noqa: E402
 from app.models import Booking, Service, Therapist  # noqa: E402
 
-# Актуальный прайс для формы бронирования
-SERVICE_CATALOG: list[tuple[str, int, Decimal]] = [
-    ("Alfa skanning", 40, Decimal("600.00")),
+# name, duration, price, набор методов (для привязки к терапевту)
+SERVICE_CATALOG: list[tuple[str, int, Decimal, frozenset[str]]] = [
+    ("Alfa skanning", 40, Decimal("600.00"), frozenset({"alfa"})),
     (
         'Hälsoundersökning med "EIS"-system',
         50,
         Decimal("950.00"),
+        frozenset({"eis"}),
     ),
     (
-        'Uppföljning: EIS-system (efterskanning)',
+        "Uppföljning: EIS-system (efterskanning)",
         45,
         Decimal("500.00"),
+        frozenset({"eis"}),
     ),
-    ("Hälsoundersökning med Monicor-system", 90, Decimal("1200.00")),
-    ("Uppföljning: Monicor-system (återbesök)", 80, Decimal("600.00")),
-    ("Paket: Monicor, EIS och Alfa", 120, Decimal("2200.00")),
-    ("Paket: EIS + Monicor", 90, Decimal("1800.00")),
-    ("Uppföljning: Paket EIS + Monicor", 90, Decimal("1000.00")),
+    (
+        "Hälsoundersökning med Monicor-system",
+        90,
+        Decimal("1200.00"),
+        frozenset({"monicor"}),
+    ),
+    (
+        "Uppföljning: Monicor-system (återbesök)",
+        80,
+        Decimal("600.00"),
+        frozenset({"monicor"}),
+    ),
+    (
+        "Paket: Monicor, EIS och Alfa",
+        120,
+        Decimal("2200.00"),
+        frozenset({"alfa", "monicor", "eis"}),
+    ),
+    (
+        "Paket: EIS + Monicor",
+        90,
+        Decimal("1800.00"),
+        frozenset({"monicor", "eis"}),
+    ),
+    (
+        "Uppföljning: Paket EIS + Monicor",
+        90,
+        Decimal("1000.00"),
+        frozenset({"monicor", "eis"}),
+    ),
 ]
 
+# Ключ → разрешённые методы
+IWONA_METHODS = frozenset({"alfa", "monicor"})
+VIKTORIA_METHODS = frozenset({"alfa", "monicor", "eis"})
 
-def main() -> None:
-    telegram_id = int(os.getenv("SEED_THERAPIST_TELEGRAM_ID", "123456789"))
-    email = os.getenv("SEED_THERAPIST_EMAIL", "therapist@example.com")
-    name = os.getenv("SEED_THERAPIST_NAME", "Anna Svensson")
 
-    session = get_session_factory()()
-    try:
+def _env(name: str, default: str) -> str:
+    return (os.getenv(name) or default).strip()
+
+
+def _upsert_therapist(
+    session: Session,
+    *,
+    telegram_id: int,
+    name: str,
+    email: str,
+    specialization: str,
+) -> Therapist:
+    email_norm = email.lower()
+    therapist = session.scalar(
+        select(Therapist).where(Therapist.email == email_norm)
+    )
+    if therapist is None:
         therapist = session.scalar(
             select(Therapist).where(Therapist.telegram_id == telegram_id)
         )
-        if therapist is None:
-            therapist = Therapist(
-                telegram_id=telegram_id,
-                name=name,
-                email=email,
-                specialization="Monicor, EIS & Alfa",
-                active=True,
+    if therapist is None:
+        therapist = Therapist(
+            telegram_id=telegram_id,
+            name=name,
+            email=email_norm,
+            specialization=specialization,
+            active=True,
+        )
+        session.add(therapist)
+        session.flush()
+        print(f"Добавлен терапевт: {name} <{email_norm}>")
+    else:
+        # telegram_id уникален — не конфликтуем с другим рядом
+        clash = session.scalar(
+            select(Therapist).where(
+                Therapist.telegram_id == telegram_id,
+                Therapist.id != therapist.id,
             )
-            session.add(therapist)
-            print(f"Добавлен терапевт: {name} <{email}>")
+        )
+        if clash is None:
+            therapist.telegram_id = telegram_id
+        therapist.name = name
+        therapist.email = email_norm
+        therapist.specialization = specialization
+        therapist.active = True
+        print(f"Обновлён терапевт: {name} (id={therapist.id})")
+    return therapist
+
+
+def _sync_services(session: Session) -> dict[str, Service]:
+    catalog_names = {row[0] for row in SERVICE_CATALOG}
+    by_name: dict[str, Service] = {}
+    for svc_name, duration, price, _methods in SERVICE_CATALOG:
+        existing = session.scalar(select(Service).where(Service.name == svc_name))
+        if existing is None:
+            existing = Service(
+                name=svc_name, duration_minutes=duration, price=price
+            )
+            session.add(existing)
+            session.flush()
+            print(f"Добавлена услуга: {svc_name}")
         else:
-            therapist.email = email
-            therapist.name = name
-            therapist.specialization = "Monicor, EIS & Alfa"
-            therapist.active = True
-            print(f"Обновлён терапевт id={therapist.id}")
+            existing.duration_minutes = duration
+            existing.price = price
+            print(f"Обновлена услуга: {svc_name}")
+        by_name[svc_name] = existing
 
-        catalog_names = {name for name, _, _ in SERVICE_CATALOG}
-        for svc_name, duration, price in SERVICE_CATALOG:
-            existing = session.scalar(select(Service).where(Service.name == svc_name))
-            if existing is None:
-                session.add(
-                    Service(name=svc_name, duration_minutes=duration, price=price)
-                )
-                print(f"Добавлена услуга: {svc_name}")
-            else:
-                existing.duration_minutes = duration
-                existing.price = price
-                print(f"Обновлена услуга: {svc_name}")
+    stale = session.scalars(
+        select(Service).where(Service.name.not_in(catalog_names))
+    ).all()
+    for svc in stale:
+        has_booking = session.scalar(
+            select(Booking.id).where(Booking.service_name == svc.name).limit(1)
+        )
+        if has_booking is None:
+            session.delete(svc)
+            print(f"Удалена устаревшая услуга: {svc.name}")
+        else:
+            print(f"Оставлена устаревшая услуга (есть записи): {svc.name}")
+    return by_name
 
-        # Удаляем устаревшие услуги, на которые нет записей
-        stale = session.scalars(
-            select(Service).where(Service.name.not_in(catalog_names))
-        ).all()
-        for svc in stale:
-            has_booking = session.scalar(
-                select(Booking.id).where(Booking.service_name == svc.name).limit(1)
+
+def _link_services(
+    therapist: Therapist,
+    services_by_name: dict[str, Service],
+    allowed_methods: frozenset[str],
+) -> None:
+    linked: list[Service] = []
+    for svc_name, _d, _p, methods in SERVICE_CATALOG:
+        if methods <= allowed_methods:
+            linked.append(services_by_name[svc_name])
+    therapist.services = linked
+    print(f"  → {therapist.name}: {len(linked)} услуг")
+
+
+def main() -> None:
+    # Явные SEED_VIKTORIA_* / SEED_IWONA_*. Старые SEED_THERAPIST_* —
+    # только для Viktoria, и только если там не указана Iwona.
+    legacy_email = _env("SEED_THERAPIST_EMAIL", "")
+    legacy_name = _env("SEED_THERAPIST_NAME", "")
+    legacy_is_iwona = "iwona" in legacy_email.lower() or "iwona" in legacy_name.lower()
+
+    if legacy_is_iwona:
+        viktoria_tg = int(_env("SEED_VIKTORIA_TELEGRAM_ID", "7973899604"))
+        viktoria_email = _env("SEED_VIKTORIA_EMAIL", "mail@mr-ab.se")
+        viktoria_name = _env("SEED_VIKTORIA_NAME", "Viktoria Antropova")
+        iwona_tg = int(
+            _env(
+                "SEED_IWONA_TELEGRAM_ID",
+                _env("SEED_THERAPIST_TELEGRAM_ID", "2000000001"),
             )
-            if has_booking is None:
-                session.delete(svc)
-                print(f"Удалена устаревшая услуга: {svc.name}")
-            else:
-                print(
-                    f"Оставлена устаревшая услуга (есть записи): {svc.name}"
-                )
+        )
+        iwona_email = _env(
+            "SEED_IWONA_EMAIL",
+            legacy_email or "iwona@mr-ab.se",
+        )
+        iwona_name = _env(
+            "SEED_IWONA_NAME",
+            legacy_name or "Iwona Aranovitch",
+        )
+    else:
+        viktoria_tg = int(
+            _env(
+                "SEED_VIKTORIA_TELEGRAM_ID",
+                _env("SEED_THERAPIST_TELEGRAM_ID", "7973899604"),
+            )
+        )
+        viktoria_email = _env(
+            "SEED_VIKTORIA_EMAIL",
+            legacy_email or "mail@mr-ab.se",
+        )
+        viktoria_name = _env(
+            "SEED_VIKTORIA_NAME",
+            legacy_name or "Viktoria Antropova",
+        )
+        iwona_tg = int(_env("SEED_IWONA_TELEGRAM_ID", "2000000001"))
+        iwona_email = _env("SEED_IWONA_EMAIL", "iwona@mr-ab.se")
+        iwona_name = _env("SEED_IWONA_NAME", "Iwona Aranovitch")
+
+    session = get_session_factory()()
+    try:
+        services_by_name = _sync_services(session)
+
+        viktoria = _upsert_therapist(
+            session,
+            telegram_id=viktoria_tg,
+            name=viktoria_name,
+            email=viktoria_email,
+            specialization="Monicor, EIS & Alfa",
+        )
+        iwona = _upsert_therapist(
+            session,
+            telegram_id=iwona_tg,
+            name=iwona_name,
+            email=iwona_email,
+            specialization="Monicor & Alfa",
+        )
+
+        keep_ids = {viktoria.id, iwona.id}
+        others = session.scalars(
+            select(Therapist).where(Therapist.id.not_in(keep_ids))
+        ).all()
+        for other in others:
+            other.active = False
+            print(f"Деактивирован терапевт: {other.name} (id={other.id})")
+
+        _link_services(viktoria, services_by_name, VIKTORIA_METHODS)
+        _link_services(iwona, services_by_name, IWONA_METHODS)
 
         session.commit()
         print("OK: сиды применены.")

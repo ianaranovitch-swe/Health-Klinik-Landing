@@ -1,5 +1,6 @@
 """ORM-модели. Импорт всех таблиц нужен для Alembic autogenerate."""
 
+from app.models.associations import therapist_services
 from app.models.base import Base
 from app.models.booking import Booking, BookingStatus
 from app.models.client import Client
@@ -13,4 +14,5 @@ __all__ = [
     "Client",
     "Service",
     "Therapist",
+    "therapist_services",
 ]

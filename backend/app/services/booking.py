@@ -35,6 +35,17 @@ def create_booking(
     if service is None:
         raise ValueError("Услуга не найдена")
 
+    # Проверяем, что терапевт оказывает эту услугу
+    allowed = db.scalar(
+        select(Service.id)
+        .where(
+            Service.id == service.id,
+            Service.therapists.any(Therapist.id == therapist.id),
+        )
+    )
+    if allowed is None:
+        raise ValueError("Эта услуга недоступна у выбранного терапевта")
+
     email_normalized = str(payload.email).lower()
     client = db.scalar(select(Client).where(Client.email == email_normalized))
     if client is None:

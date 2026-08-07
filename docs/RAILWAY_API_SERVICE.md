@@ -55,6 +55,10 @@ Variables:
 python -m scripts.seed_demo
 ```
 
-Нужны переменные: `SEED_THERAPIST_TELEGRAM_ID`, `SEED_THERAPIST_EMAIL`, `SEED_THERAPIST_NAME` (или дефолты из скрипта).
+Переменные (рекомендуется):
+- `SEED_VIKTORIA_TELEGRAM_ID`, `SEED_VIKTORIA_EMAIL`, `SEED_VIKTORIA_NAME`
+- `SEED_IWONA_TELEGRAM_ID`, `SEED_IWONA_EMAIL`, `SEED_IWONA_NAME`
+
+Iwona → услуги Alfa + Monicor. Viktoria → Alfa + Monicor + EIS (и пакеты с EIS).
 
 Лендинг: `data-api-base="auto"`; прод-URL API — константа `PROD_API_BASE` в `booking.js`.

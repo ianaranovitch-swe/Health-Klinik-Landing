@@ -140,11 +140,30 @@
   }
 
   async function loadServices() {
-    const services = await fetchJson("/api/services");
+    const therapistId = therapistSelect.value;
+    const first = serviceSelect.options[0];
+    serviceSelect.innerHTML = "";
+    if (first) {
+      first.value = "";
+      first.textContent = therapistId
+        ? "Välj tjänst…"
+        : "Välj behandlare först…";
+      serviceSelect.appendChild(first);
+    }
+
+    if (!therapistId) {
+      serviceSelect.disabled = true;
+      return;
+    }
+
+    const services = await fetchJson(
+      `/api/services?therapist_id=${encodeURIComponent(therapistId)}`
+    );
     fillSelect(serviceSelect, services, (s) => ({
       value: String(s.id),
       label: `${s.name} — ${s.duration_minutes} min · ${formatPriceSek(s.price)}`,
     }));
+    serviceSelect.disabled = false;
   }
 
   async function loadSlots() {
@@ -207,7 +226,8 @@
 
     showStatus("Laddar formulär…");
     try {
-      await Promise.all([loadTherapists(), loadServices()]);
+      await loadTherapists();
+      await loadServices();
       showStatus("");
       await loadSlots();
     } catch (err) {
@@ -219,8 +239,14 @@
     }
   }
 
-  therapistSelect.addEventListener("change", () => {
-    loadSlots();
+  therapistSelect.addEventListener("change", async () => {
+    try {
+      await loadServices();
+      await loadSlots();
+    } catch (err) {
+      showError("Kunde inte ladda tjänster för vald behandlare.");
+      console.error(err);
+    }
   });
   dateInput.addEventListener("change", () => {
     if (dateInput.value && isWeekendISO(dateInput.value)) {
@@ -319,7 +345,7 @@
     }
   });
 
-  againBtn.addEventListener("click", () => {
+  againBtn.addEventListener("click", async () => {
     successPanel.hidden = true;
     formPanel.hidden = false;
     form.reset();
@@ -327,7 +353,12 @@
     dateInput.value = nextOpenDayISO();
     showError("");
     showStatus("");
-    loadSlots();
+    try {
+      await loadServices();
+      await loadSlots();
+    } catch (err) {
+      console.error(err);
+    }
   });
 
   init();
