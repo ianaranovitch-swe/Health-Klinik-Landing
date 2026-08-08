@@ -23,6 +23,10 @@ API должен смотреть **только в папку `backend`**.
 Variables:
 - `DATABASE_URL` = reference на Postgres (`${{Postgres.DATABASE_URL}}`)
 - `CORS_ORIGINS` = `https://mrboka.com,https://www.mrboka.com`
+- `PUBLIC_API_BASE` = публичный URL этого API (тот же, что Generate Domain), например  
+  `https://industrious-exploration-production-512f.up.railway.app`  
+  Нужен для кнопки **Bekräfta via e-post** в письме клиенту.
+- `BOT_USERNAME` = username бота без `@`
 
 ## Публичный URL (иначе браузер покажет «Not Found / train has not arrived»)
 
@@ -58,6 +62,8 @@ python -m scripts.seed_demo
 Переменные (рекомендуется):
 - `SEED_VIKTORIA_TELEGRAM_ID`, `SEED_VIKTORIA_EMAIL`, `SEED_VIKTORIA_NAME`
 - `SEED_IWONA_TELEGRAM_ID`, `SEED_IWONA_EMAIL`, `SEED_IWONA_NAME`
+- `SEED_BORIS_TELEGRAM_ID`, `SEED_JAN_TELEGRAM_ID` (+ имена) — staff бота
+- `PUBLIC_API_BASE` — публичный URL API
 
 Iwona → услуги Alfa + Monicor. Viktoria → Alfa + Monicor + EIS (и пакеты с EIS).
 

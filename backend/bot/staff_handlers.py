@@ -21,7 +21,9 @@ from app.models.staff import StaffMember, StaffRole
 from app.services.staff_access import get_active_staff_by_telegram_id
 from app.services.staff_bookings import (
     format_booking_card,
-    list_active_bookings,
+    format_therapist_group_header,
+    group_bookings_by_therapist,
+    list_active_bookings_for_staff,
     mailto_url,
     telegram_user_url,
 )
@@ -43,9 +45,12 @@ def _first_name(staff: StaffMember) -> str:
 
 def _role_line_sv(staff: StaffMember) -> str:
     if staff.role is StaffRole.superuser:
-        return "Du är inloggad som administratör och ser alla bokningar."
+        return (
+            "Du är inloggad som administratör och ser alla bokningar "
+            "(grupperade per behandlare)."
+        )
     if staff.role is StaffRole.therapist:
-        return "Du är inloggad som behandlare och ser alla bokningar på kliniken."
+        return "Du är inloggad som behandlare och ser dina egna bokningar."
     assert_never(staff.role)
 
 
@@ -69,30 +74,34 @@ def booking_contact_keyboard(
     client_telegram_id: int | None,
     booking: Booking,
 ) -> InlineKeyboardMarkup:
-    """Кнопки связи: Telegram (если есть id) и E-post (mailto)."""
-    rows: list[list[InlineKeyboardButton]] = []
+    """Всегда обе кнопки: Telegram + E-post (mailto)."""
     if client_telegram_id is not None and client_telegram_id > 0:
-        rows.append(
+        tg_button = InlineKeyboardButton(
+            text="💬 Kontakta via Telegram",
+            url=telegram_user_url(client_telegram_id),
+        )
+    else:
+        # Не скрываем кнопку — объясняем, что клиент ещё не в Telegram
+        tg_button = InlineKeyboardButton(
+            text="💬 Kontakta via Telegram",
+            callback_data=StaffCb(action="no_tg").pack(),
+        )
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [tg_button],
             [
                 InlineKeyboardButton(
-                    text="💬 Kontakta via Telegram",
-                    url=telegram_user_url(client_telegram_id),
+                    text="✉️ Kontakta via e-post",
+                    url=mailto_url(
+                        to_email=client_email,
+                        client_name=client_name,
+                        booking=booking,
+                    ),
                 )
-            ]
-        )
-    rows.append(
-        [
-            InlineKeyboardButton(
-                text="✉️ Kontakta via e-post",
-                url=mailto_url(
-                    to_email=client_email,
-                    client_name=client_name,
-                    booking=booking,
-                ),
-            )
+            ],
         ]
     )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def send_staff_welcome(message: Message, staff: StaffMember) -> None:
@@ -101,15 +110,26 @@ async def send_staff_welcome(message: Message, staff: StaffMember) -> None:
         f"Hej {escape(_first_name(staff))}! 👋\n\n"
         f"{escape(_role_line_sv(staff))}\n\n"
         "Tryck på knappen nedan för att se aktuella bokningar "
-        "(klient, tid, behandlare och kontakt)."
+        "(pending och bekräftade — status syns tydligt)."
     )
     await message.answer(text, reply_markup=staff_welcome_keyboard())
 
 
+@router.callback_query(StaffCb.filter(F.action == "no_tg"))
+async def on_no_telegram(callback: CallbackQuery, callback_data: StaffCb) -> None:
+    """Клиент ещё не подтвердил через Telegram — нет telegram_id."""
+    del callback_data
+    await callback.answer(
+        "Klienten har inte bekräftat via Telegram ännu "
+        "(ingen Telegram-kontakt). Använd e-post-knappen.",
+        show_alert=True,
+    )
+
+
 @router.callback_query(StaffCb.filter(F.action == "list"))
 async def on_list_bookings(callback: CallbackQuery, callback_data: StaffCb) -> None:
-    """Показать все актуальные брони клиники."""
-    del callback_data  # нужен только фильтр
+    """Список броней: свои (therapist) или все с группами (superuser)."""
+    del callback_data
     user = callback.from_user
     if user is None:
         await callback.answer()
@@ -122,18 +142,54 @@ async def on_list_bookings(callback: CallbackQuery, callback_data: StaffCb) -> N
             await callback.answer("Ingen behörighet.", show_alert=True)
             return
 
-        bookings = list_active_bookings(session)
-        cards: list[tuple[str, InlineKeyboardMarkup]] = []
-        total = len(bookings)
-        for i, booking in enumerate(bookings, start=1):
-            text = format_booking_card(booking, index=i, total=total)
-            kb = booking_contact_keyboard(
-                client_email=booking.client.email,
-                client_name=booking.client.name,
-                client_telegram_id=booking.client.telegram_id,
-                booking=booking,
-            )
-            cards.append((text, kb))
+        role = staff.role
+        bookings = list_active_bookings_for_staff(session, staff)
+        is_super = role is StaffRole.superuser
+
+        # Собираем исходящие сообщения до close()
+        outgoing: list[tuple[str, InlineKeyboardMarkup | None]] = []
+
+        if not bookings:
+            pass
+        elif is_super:
+            groups = group_bookings_by_therapist(bookings)
+            global_i = 0
+            total = len(bookings)
+            for therapist_name, group in groups:
+                outgoing.append(
+                    (format_therapist_group_header(therapist_name, len(group)), None)
+                )
+                for booking in group:
+                    global_i += 1
+                    text = format_booking_card(
+                        booking,
+                        index=global_i,
+                        total=total,
+                        show_therapist=True,
+                    )
+                    kb = booking_contact_keyboard(
+                        client_email=booking.client.email,
+                        client_name=booking.client.name,
+                        client_telegram_id=booking.client.telegram_id,
+                        booking=booking,
+                    )
+                    outgoing.append((text, kb))
+        else:
+            total = len(bookings)
+            for i, booking in enumerate(bookings, start=1):
+                text = format_booking_card(
+                    booking,
+                    index=i,
+                    total=total,
+                    show_therapist=False,
+                )
+                kb = booking_contact_keyboard(
+                    client_email=booking.client.email,
+                    client_name=booking.client.name,
+                    client_telegram_id=booking.client.telegram_id,
+                    booking=booking,
+                )
+                outgoing.append((text, kb))
     finally:
         session.close()
 
@@ -142,20 +198,23 @@ async def on_list_bookings(callback: CallbackQuery, callback_data: StaffCb) -> N
     if callback.message is None:
         return
 
-    if not cards:
+    if not outgoing:
         await callback.message.answer(
             "Inga aktuella bokningar just nu.\n"
-            "(Visar väntande och bekräftade tider som ännu inte passerat.)"
+            "(Visar pending och bekräftade tider som ännu inte passerat.)"
         )
         return
 
     await callback.message.answer(
-        f"Aktuella bokningar: {len(cards)}\n"
-        "Varje bokning skickas som eget meddelande ↓"
+        f"Aktuella bokningar: {sum(1 for _, kb in outgoing if kb is not None)}\n"
+        "Status: ⏳ pending · ✅ bekräftad"
     )
-    for text, kb in cards:
+    for text, kb in outgoing:
         try:
-            await callback.message.answer(text, reply_markup=kb)
+            if kb is None:
+                await callback.message.answer(text)
+            else:
+                await callback.message.answer(text, reply_markup=kb)
         except Exception:
             logger.exception(
                 "Не удалось отправить карточку брони, пробуем без кнопок"

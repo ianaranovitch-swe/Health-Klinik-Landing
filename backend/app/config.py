@@ -28,6 +28,8 @@ class Settings:
 
     database_url: str
     bot_username: str = ""
+    # Публичный URL API (для ссылки «Bekräfta via e-post» в письме)
+    public_api_base: str = ""
     cors_origins: list[str] = field(default_factory=lambda: ["*"])
 
     @classmethod
@@ -41,6 +43,7 @@ class Settings:
         return cls(
             database_url=normalize_database_url(raw),
             bot_username=(os.getenv("BOT_USERNAME") or "").lstrip("@"),
+            public_api_base=(os.getenv("PUBLIC_API_BASE") or "").rstrip("/"),
             cors_origins=_split_origins(os.getenv("CORS_ORIGINS")),
         )
 

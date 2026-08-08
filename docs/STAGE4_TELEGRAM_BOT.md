@@ -8,21 +8,31 @@
 3. Бот ставит бронь в статус `confirmed` и отвечает клиенту.
 4. Терапевту уходит сообщение в Telegram (если у него реальный `telegram_id` в БД).
 
-### Staff-меню (все актуальные брони)
+### Staff-меню (актуальные брони)
 
-Пользователи из таблицы `staff_members` (Viktoria, Iwona, Boris, Jan):
+Пользователи из таблицы `staff_members`:
 
-1. Открывают бота `/start`
-2. Бот узнаёт их по Telegram ID → приветствие + кнопка **Visa aktuella bokningar**
-3. По клику — все брони клиники (`pending` + `confirmed`, ещё не прошедшие), с **Behandlare**, клиентом и кнопками:
-   - **Kontakta via Telegram** (если клиент подтвердил бронь в боте)
-   - **Kontakta via e-post** (`mailto:` → стандартный почтовый клиент)
+| Кто | Что видит |
+|---|---|
+| Viktoria, Iwona (`therapist`) | **только свои** брони |
+| Boris, Jan (`superuser`) | **все** брони, группы по behandlare |
 
-Все четверо видят **один и тот же** полный список. Роли: `therapist` / `superuser` (только текст приветствия).
+1. `/start` → приветствие + **Visa aktuella bokningar**
+2. Список: `pending` (⏳) и `confirmed` (✅), ещё не прошедшие
+3. Кнопки всегда: **Telegram** + **E-post**  
+   (если у клиента нет Telegram — кнопка объясняет это во всплывающем окне)
 
-Сиды staff: `python -m scripts.seed_demo` (нужны `SEED_BORIS_*`, `SEED_JAN_*` и telegram_id терапевтов).
+### Подтверждение без Telegram (e-post)
 
-Миграция `staff_members` применяется при деплое **API** (`alembic upgrade head`). После пуша: Redeploy API → seed → Redeploy бота.
+В письме клиенту две кнопки:
+- **Bekräfta i Telegram**
+- **Bekräfta via e-post** → `GET {PUBLIC_API_BASE}/api/bookings/confirm/{token}`  
+  (тот же токен, статус `confirmed` в БД + HTML-страница)
+
+На API нужен `PUBLIC_API_BASE` (публичный URL сервиса API).
+
+Сиды staff: `python -m scripts.seed_demo`.
+Миграция `staff_members` — при деплое API.
 
 ## Локальный запуск
 
@@ -50,6 +60,7 @@ python -m pytest tests/test_staff_bookings.py -q
 | `DATABASE_URL` | сервис бота | `${{Postgres.DATABASE_URL}}` |
 | `SEED_BORIS_TELEGRAM_ID` | API (seed) | суперпользователь бота |
 | `SEED_JAN_TELEGRAM_ID` | API (seed) | суперпользователь бота |
+| `PUBLIC_API_BASE` | API | публичный URL API для e-post-подтверждения |
 
 `CORS_ORIGINS` боту **не нужен** (это только для FastAPI). Можно удалить с сервиса бота или оставить — на бота не влияет. Localhost в CORS на API можно оставить для локальной разработки.
 

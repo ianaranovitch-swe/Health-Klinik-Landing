@@ -22,6 +22,14 @@ def build_telegram_deep_link(bot_username: str, token: uuid.UUID) -> str:
     return f"https://t.me/{bot_username}?start=confirm_{token}"
 
 
+def build_email_confirm_link(public_api_base: str, token: uuid.UUID) -> str | None:
+    """Ссылка подтверждения без Telegram (открывается в браузере)."""
+    base = (public_api_base or "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}/api/bookings/confirm/{token}"
+
+
 def create_booking(
     db: Session,
     payload: BookingCreateIn,
@@ -76,6 +84,7 @@ def create_booking(
     db.refresh(booking)
 
     deep_link = build_telegram_deep_link(settings.bot_username, token)
+    email_confirm_link = build_email_confirm_link(settings.public_api_base, token)
 
     # Письма не должны ломать создание записи (ошибки email только в лог)
     notify_booking_created(
@@ -88,6 +97,7 @@ def create_booking(
         booking_date=booking.booking_date,
         booking_time=booking.booking_time,
         telegram_deep_link=deep_link,
+        email_confirm_link=email_confirm_link,
     )
 
     return BookingCreateOut(

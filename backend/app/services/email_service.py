@@ -56,14 +56,32 @@ def render_client_booking_email(
     booking_date: date,
     booking_time: time,
     telegram_deep_link: str,
+    email_confirm_link: str | None = None,
 ) -> str:
-    """HTML-шаблон клиенту: детали + кнопка Bekräfta i Telegram."""
+    """HTML-шаблон клиенту: детали + Telegram и/или e-post-подтверждение."""
     when = f"{booking_date.isoformat()} kl. {booking_time.strftime('%H:%M')}"
     name = escape(client_name)
     therapist = escape(therapist_name)
     service = escape(service_name)
-    link = escape(telegram_deep_link, quote=True)
-    link_text = escape(telegram_deep_link)
+    tg_link = escape(telegram_deep_link, quote=True)
+    tg_text = escape(telegram_deep_link)
+
+    email_block = ""
+    if email_confirm_link:
+        em_link = escape(email_confirm_link, quote=True)
+        em_text = escape(email_confirm_link)
+        email_block = f"""
+            <p style="text-align:center;margin:0 0 12px;">
+              <a href="{em_link}"
+                 style="display:inline-block;background:#1a5f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px;">
+                Bekräfta via e-post
+              </a>
+            </p>
+            <p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#7a7a8a;text-align:center;">
+              Har du inte Telegram? Använd knappen ovan.<br>
+              <a href="{em_link}" style="color:#1a5f4a;word-break:break-all;">{em_text}</a>
+            </p>
+"""
 
     return f"""<!DOCTYPE html>
 <html lang="sv">
@@ -82,7 +100,7 @@ def render_client_booking_email(
           <td style="padding:28px;">
             <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">Hej {name}!</p>
             <p style="margin:0 0 20px;font-size:16px;line-height:1.6;">
-              Tack för din bokning. Bekräfta tiden i Telegram så att vi kan reservera platsen.
+              Tack för din bokning. Bekräfta tiden via Telegram eller e-post så att vi kan reservera platsen.
             </p>
             <table role="presentation" width="100%" style="background:#eef6f2;border-radius:12px;margin-bottom:24px;">
               <tr><td style="padding:18px 20px;font-size:15px;line-height:1.7;">
@@ -92,15 +110,16 @@ def render_client_booking_email(
               </td></tr>
             </table>
             <p style="text-align:center;margin:0 0 12px;">
-              <a href="{link}"
+              <a href="{tg_link}"
                  style="display:inline-block;background:#c9a227;color:#1a1a2e;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px;">
                 Bekräfta i Telegram
               </a>
             </p>
-            <p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#7a7a8a;text-align:center;">
+            <p style="margin:0 0 16px;font-size:13px;line-height:1.5;color:#7a7a8a;text-align:center;">
               Om knappen inte fungerar, öppna länken:<br>
-              <a href="{link}" style="color:#1a5f4a;word-break:break-all;">{link_text}</a>
+              <a href="{tg_link}" style="color:#1a5f4a;word-break:break-all;">{tg_text}</a>
             </p>
+            {email_block}
           </td>
         </tr>
         <tr>
@@ -189,8 +208,13 @@ def notify_booking_created(
     booking_date: date,
     booking_time: time,
     telegram_deep_link: str,
+    email_confirm_link: str | None = None,
 ) -> None:
     """Письма клиенту и терапевту после сохранения записи в БД."""
+    if not email_confirm_link:
+        logger.warning(
+            "Письмо без ссылки e-post-подтверждения: задай PUBLIC_API_BASE"
+        )
     client_html = render_client_booking_email(
         client_name=client_name,
         therapist_name=therapist_name,
@@ -198,6 +222,7 @@ def notify_booking_created(
         booking_date=booking_date,
         booking_time=booking_time,
         telegram_deep_link=telegram_deep_link,
+        email_confirm_link=email_confirm_link,
     )
     therapist_html = render_therapist_booking_email(
         client_name=client_name,
