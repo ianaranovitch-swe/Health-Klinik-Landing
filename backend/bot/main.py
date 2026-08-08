@@ -25,6 +25,7 @@ from aiogram.client.default import DefaultBotProperties  # noqa: E402
 from aiogram.enums import ParseMode  # noqa: E402
 
 from bot.handlers import router  # noqa: E402
+from bot.staff_handlers import router as staff_router  # noqa: E402
 
 
 async def main() -> None:
@@ -46,6 +47,7 @@ async def main() -> None:
     )
     dp = Dispatcher()
     dp.include_router(router)
+    dp.include_router(staff_router)
 
     me = await bot.get_me()
     logger.info("Бот запущен: @%s (id=%s)", me.username, me.id)

@@ -8,6 +8,22 @@
 3. Бот ставит бронь в статус `confirmed` и отвечает клиенту.
 4. Терапевту уходит сообщение в Telegram (если у него реальный `telegram_id` в БД).
 
+### Staff-меню (все актуальные брони)
+
+Пользователи из таблицы `staff_members` (Viktoria, Iwona, Boris, Jan):
+
+1. Открывают бота `/start`
+2. Бот узнаёт их по Telegram ID → приветствие + кнопка **Visa aktuella bokningar**
+3. По клику — все брони клиники (`pending` + `confirmed`, ещё не прошедшие), с **Behandlare**, клиентом и кнопками:
+   - **Kontakta via Telegram** (если клиент подтвердил бронь в боте)
+   - **Kontakta via e-post** (`mailto:` → стандартный почтовый клиент)
+
+Все четверо видят **один и тот же** полный список. Роли: `therapist` / `superuser` (только текст приветствия).
+
+Сиды staff: `python -m scripts.seed_demo` (нужны `SEED_BORIS_*`, `SEED_JAN_*` и telegram_id терапевтов).
+
+Миграция `staff_members` применяется при деплое **API** (`alembic upgrade head`). После пуша: Redeploy API → seed → Redeploy бота.
+
 ## Локальный запуск
 
 ```powershell
@@ -18,6 +34,13 @@ pip install -r requirements.txt
 python -m bot.main
 ```
 
+Тесты staff-форматирования:
+
+```powershell
+cd backend
+python -m pytest tests/test_staff_bookings.py -q
+```
+
 ## Переменные
 
 | Переменная | Где | Описание |
@@ -25,6 +48,8 @@ python -m bot.main
 | `BOT_TOKEN` | сервис бота | токен от @BotFather |
 | `BOT_USERNAME` | сервис бота **и** API | username без `@` (для deep-link на сайте) |
 | `DATABASE_URL` | сервис бота | `${{Postgres.DATABASE_URL}}` |
+| `SEED_BORIS_TELEGRAM_ID` | API (seed) | суперпользователь бота |
+| `SEED_JAN_TELEGRAM_ID` | API (seed) | суперпользователь бота |
 
 `CORS_ORIGINS` боту **не нужен** (это только для FastAPI). Можно удалить с сервиса бота или оставить — на бота не влияет. Localhost в CORS на API можно оставить для локальной разработки.
 
@@ -61,14 +86,20 @@ python -m bot.main
 ### 4. Variables у API (`industrious-exploration`)
 - `BOT_USERNAME` = тот же username  
   (иначе кнопка ведёт на `t.me/BOT_USERNAME`)
+- `SEED_BORIS_TELEGRAM_ID` / `SEED_JAN_TELEGRAM_ID` (+ имена) для seed
+- те же `SEED_VIKTORIA_*` / `SEED_IWONA_*`
 
-### 5. Redeploy API после смены `BOT_USERNAME`
+### 5. После деплоя API
+1. Redeploy API (миграция `staff_members`)
+2. В API Console: `python -m scripts.seed_demo`
+3. Redeploy бота
 
 ### 6. Проверка
 1. Логи бота: `Бот запущен: @...`
 2. Тестовая бронь на сайте → **Bekräfta i Telegram**
 3. Бот отвечает «Din bokning är bekräftad»
 4. Терапевт (с реальным telegram_id) получает уведомление
+5. `/start` от Jan/Boris/Viktoria/Iwona → кнопка списка броней
 
 ## Если бот молчит (открывается, но не отвечает)
 

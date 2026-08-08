@@ -5,6 +5,7 @@ from app.models.base import Base
 from app.models.booking import Booking, BookingStatus
 from app.models.client import Client
 from app.models.service import Service
+from app.models.staff import StaffMember, StaffRole
 from app.models.therapist import Therapist
 
 __all__ = [
@@ -13,6 +14,8 @@ __all__ = [
     "BookingStatus",
     "Client",
     "Service",
+    "StaffMember",
+    "StaffRole",
     "Therapist",
     "therapist_services",
 ]

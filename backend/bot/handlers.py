@@ -10,6 +10,8 @@ from aiogram.types import Message
 
 from app.db import get_session_factory
 from app.services.booking_confirm import confirm_booking_by_payload
+from app.services.staff_access import get_active_staff_by_telegram_id
+from bot.staff_handlers import send_staff_welcome
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +36,25 @@ def _is_notifiable_telegram_id(telegram_id: int | None) -> bool:
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
     """
-    /start — приветствие
+    /start — приветствие (клиент или staff)
     /start confirm_<uuid> — подтверждение брони с сайта
     """
     args = (command.args or "").strip()
 
-    # Приветствие без payload — отдельный try (не путать с ошибкой брони)
+    # Приветствие без payload — staff или клиент
     if not args:
         try:
+            user = message.from_user
+            if user is not None:
+                session = get_session_factory()()
+                try:
+                    staff = get_active_staff_by_telegram_id(session, user.id)
+                    if staff is not None:
+                        await send_staff_welcome(message, staff)
+                        return
+                finally:
+                    session.close()
+
             await message.answer(
                 "Hej! Jag är bokningsboten för Människans Resurser.\n\n"
                 "När du bokat tid på webbplatsen, tryck på knappen "
@@ -84,7 +97,8 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
                         f"E-post: {result.client.email}\n"
                         f"Tjänst: {result.booking.service_name}\n"
                         f"Datum: {result.booking.booking_date.isoformat()} "
-                        f"kl. {time_label}"
+                        f"kl. {time_label}\n"
+                        f"Behandlare: {result.therapist.name}"
                     )
                     await bot.send_message(chat_id=therapist_tg, text=text)
                 except Exception:

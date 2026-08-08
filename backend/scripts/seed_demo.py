@@ -22,7 +22,7 @@ load_dotenv(ROOT.parent / ".env")
 load_dotenv(ROOT / ".env")
 
 from app.db import get_session_factory  # noqa: E402
-from app.models import Booking, Service, Therapist  # noqa: E402
+from app.models import Booking, Service, StaffMember, StaffRole, Therapist  # noqa: E402
 
 # name, duration, price, набор методов (для привязки к терапевту)
 SERVICE_CATALOG: list[tuple[str, int, Decimal, frozenset[str]]] = [
@@ -75,9 +75,28 @@ SERVICE_CATALOG: list[tuple[str, int, Decimal, frozenset[str]]] = [
 IWONA_METHODS = frozenset({"alfa", "monicor"})
 VIKTORIA_METHODS = frozenset({"alfa", "monicor", "eis"})
 
+# Дефолтные Telegram ID — все разные (unique на therapists / staff_members)
+DEFAULT_VIKTORIA_TG = "1030716946"
+DEFAULT_IWONA_TG = "2000000001"  # заглушка, пока нет реального ID в env
+DEFAULT_BORIS_TG = "1647802523"
+DEFAULT_JAN_TG = "7973899604"
+
 
 def _env(name: str, default: str) -> str:
     return (os.getenv(name) or default).strip()
+
+
+def _assert_unique_telegram_ids(labeled_ids: list[tuple[str, int]]) -> None:
+    """Падаем с понятной ошибкой, если два человека получили один telegram_id."""
+    seen: dict[int, str] = {}
+    for label, tg_id in labeled_ids:
+        prev = seen.get(tg_id)
+        if prev is not None:
+            raise ValueError(
+                f"Одинаковый telegram_id={tg_id} у «{prev}» и «{label}». "
+                "Задай разные SEED_*_TELEGRAM_ID в env."
+            )
+        seen[tg_id] = label
 
 
 def _upsert_therapist(
@@ -123,6 +142,37 @@ def _upsert_therapist(
         therapist.active = True
         print(f"Обновлён терапевт: {name} (id={therapist.id})")
     return therapist
+
+
+def _upsert_staff(
+    session: Session,
+    *,
+    telegram_id: int,
+    name: str,
+    role: StaffRole,
+) -> StaffMember:
+    """Добавить/обновить сотрудника бота (доступ к списку броней)."""
+    member = session.scalar(
+        select(StaffMember).where(StaffMember.telegram_id == telegram_id)
+    )
+    if member is None:
+        # Имя могло смениться у того же человека — ищем по имени+роли редко нужно;
+        # telegram_id — главный ключ доступа.
+        member = StaffMember(
+            telegram_id=telegram_id,
+            name=name,
+            role=role,
+            active=True,
+        )
+        session.add(member)
+        session.flush()
+        print(f"Добавлен staff: {name} ({role.value}, tg={telegram_id})")
+    else:
+        member.name = name
+        member.role = role
+        member.active = True
+        print(f"Обновлён staff: {name} ({role.value}, tg={telegram_id})")
+    return member
 
 
 def _sync_services(session: Session) -> dict[str, Service]:
@@ -183,13 +233,13 @@ def main() -> None:
     legacy_is_iwona = "iwona" in legacy_email.lower() or "iwona" in legacy_name.lower()
 
     if legacy_is_iwona:
-        viktoria_tg = int(_env("SEED_VIKTORIA_TELEGRAM_ID", "7973899604"))
+        viktoria_tg = int(_env("SEED_VIKTORIA_TELEGRAM_ID", DEFAULT_VIKTORIA_TG))
         viktoria_email = _env("SEED_VIKTORIA_EMAIL", "mail@mr-ab.se")
         viktoria_name = _env("SEED_VIKTORIA_NAME", "Viktoria Antropova")
         iwona_tg = int(
             _env(
                 "SEED_IWONA_TELEGRAM_ID",
-                _env("SEED_THERAPIST_TELEGRAM_ID", "2000000001"),
+                _env("SEED_THERAPIST_TELEGRAM_ID", DEFAULT_IWONA_TG),
             )
         )
         iwona_email = _env(
@@ -204,7 +254,7 @@ def main() -> None:
         viktoria_tg = int(
             _env(
                 "SEED_VIKTORIA_TELEGRAM_ID",
-                _env("SEED_THERAPIST_TELEGRAM_ID", "7973899604"),
+                _env("SEED_THERAPIST_TELEGRAM_ID", DEFAULT_VIKTORIA_TG),
             )
         )
         viktoria_email = _env(
@@ -215,7 +265,7 @@ def main() -> None:
             "SEED_VIKTORIA_NAME",
             legacy_name or "Viktoria Antropova",
         )
-        iwona_tg = int(_env("SEED_IWONA_TELEGRAM_ID", "2000000001"))
+        iwona_tg = int(_env("SEED_IWONA_TELEGRAM_ID", DEFAULT_IWONA_TG))
         iwona_email = _env("SEED_IWONA_EMAIL", "iwona@mr-ab.se")
         iwona_name = _env("SEED_IWONA_NAME", "Iwona Aranovitch")
 
@@ -248,6 +298,57 @@ def main() -> None:
 
         _link_services(viktoria, services_by_name, VIKTORIA_METHODS)
         _link_services(iwona, services_by_name, IWONA_METHODS)
+
+        # Staff для бота: оба терапевта + суперпользователи (контроль процесса)
+        boris_tg = int(_env("SEED_BORIS_TELEGRAM_ID", DEFAULT_BORIS_TG))
+        boris_name = _env("SEED_BORIS_NAME", "Boris")
+        jan_tg = int(_env("SEED_JAN_TELEGRAM_ID", DEFAULT_JAN_TG))
+        jan_name = _env("SEED_JAN_NAME", "Jan")
+
+        _assert_unique_telegram_ids(
+            [
+                ("Viktoria", viktoria_tg),
+                ("Iwona", iwona_tg),
+                ("Boris", boris_tg),
+                ("Jan", jan_tg),
+            ]
+        )
+
+        staff_keep_ids: set[int] = set()
+        for member in (
+            _upsert_staff(
+                session,
+                telegram_id=viktoria_tg,
+                name=viktoria_name,
+                role=StaffRole.therapist,
+            ),
+            _upsert_staff(
+                session,
+                telegram_id=iwona_tg,
+                name=iwona_name,
+                role=StaffRole.therapist,
+            ),
+            _upsert_staff(
+                session,
+                telegram_id=boris_tg,
+                name=boris_name,
+                role=StaffRole.superuser,
+            ),
+            _upsert_staff(
+                session,
+                telegram_id=jan_tg,
+                name=jan_name,
+                role=StaffRole.superuser,
+            ),
+        ):
+            staff_keep_ids.add(member.id)
+
+        stale_staff = session.scalars(
+            select(StaffMember).where(StaffMember.id.not_in(staff_keep_ids))
+        ).all()
+        for stale in stale_staff:
+            stale.active = False
+            print(f"Деактивирован staff: {stale.name} (id={stale.id})")
 
         session.commit()
         print("OK: сиды применены.")
