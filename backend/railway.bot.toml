@@ -1,0 +1,13 @@
+# Конфиг ТОЛЬКО для сервиса telegram-bot
+# В Railway → telegram-bot → Settings → Config-as-code → Config File Path:
+#   /backend/railway.bot.toml   (абсолютный путь от корня репо)
+# Root Directory по-прежнему: backend
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.bot"
+
+[deploy]
+startCommand = "python -m bot.main"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

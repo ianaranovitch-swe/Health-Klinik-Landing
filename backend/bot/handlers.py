@@ -38,48 +38,66 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
     /start confirm_<uuid> — подтверждение брони с сайта
     """
     args = (command.args or "").strip()
+
+    # Приветствие без payload — отдельный try (не путать с ошибкой брони)
     if not args:
-        await message.answer(
-            "Hej! Jag är bokningsboten för Människans Resurser.\n\n"
-            "När du bokat tid på webbplatsen, tryck på knappen "
-            "«Bekräfta i Telegram» i bekräftelsen — då syns din tid här."
-        )
+        try:
+            await message.answer(
+                "Hej! Jag är bokningsboten för Människans Resurser.\n\n"
+                "När du bokat tid på webbplatsen, tryck på knappen "
+                "«Bekräfta i Telegram» i bekräftelsen — då syns din tid här."
+            )
+        except Exception:
+            logger.exception("Не удалось отправить приветствие /start")
         return
 
-    session = get_session_factory()()
     try:
-        result = confirm_booking_by_payload(
-            session,
-            args,
-            client_telegram_id=message.from_user.id if message.from_user else None,
-        )
-    finally:
-        session.close()
+        session = get_session_factory()()
+        try:
+            result = confirm_booking_by_payload(
+                session,
+                args,
+                client_telegram_id=(
+                    message.from_user.id if message.from_user else None
+                ),
+            )
+        finally:
+            session.close()
 
-    await message.answer(result.message_sv)
+        await message.answer(result.message_sv)
 
-    # Уведомление терапевту (если telegram_id не заглушка)
-    if (
-        result.ok
-        and result.booking is not None
-        and result.therapist is not None
-        and result.client is not None
-    ):
-        therapist_tg = result.therapist.telegram_id
-        if _is_notifiable_telegram_id(therapist_tg):
-            try:
-                time_label = result.booking.booking_time.strftime("%H:%M")
-                text = (
-                    "Ny bokning bekräftad ✅\n\n"
-                    f"Klient: {result.client.name}\n"
-                    f"Telefon: {result.client.phone}\n"
-                    f"E-post: {result.client.email}\n"
-                    f"Tjänst: {result.booking.service_name}\n"
-                    f"Datum: {result.booking.booking_date.isoformat()} kl. {time_label}"
-                )
-                await bot.send_message(chat_id=therapist_tg, text=text)
-            except Exception:
-                logger.exception(
-                    "Не удалось уведомить терапевта telegram_id=%s",
-                    therapist_tg,
-                )
+        # Уведомление терапевту (если telegram_id не заглушка)
+        if (
+            result.ok
+            and result.booking is not None
+            and result.therapist is not None
+            and result.client is not None
+        ):
+            therapist_tg = result.therapist.telegram_id
+            if _is_notifiable_telegram_id(therapist_tg):
+                try:
+                    time_label = result.booking.booking_time.strftime("%H:%M")
+                    text = (
+                        "Ny bokning bekräftad ✅\n\n"
+                        f"Klient: {result.client.name}\n"
+                        f"Telefon: {result.client.phone}\n"
+                        f"E-post: {result.client.email}\n"
+                        f"Tjänst: {result.booking.service_name}\n"
+                        f"Datum: {result.booking.booking_date.isoformat()} "
+                        f"kl. {time_label}"
+                    )
+                    await bot.send_message(chat_id=therapist_tg, text=text)
+                except Exception:
+                    logger.exception(
+                        "Не удалось уведомить терапевта telegram_id=%s",
+                        therapist_tg,
+                    )
+    except Exception:
+        logger.exception("Ошибка подтверждения брони (args=%r)", command.args)
+        try:
+            await message.answer(
+                "Något gick fel när bokningen skulle bekräftas. "
+                "Försök igen om en stund eller kontakta kliniken."
+            )
+        except Exception:
+            logger.exception("Не удалось отправить сообщение об ошибке подтверждения")

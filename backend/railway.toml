@@ -1,4 +1,5 @@
-# Конфиг только для API-сервиса (когда Root Directory = backend)
+# Конфиг только для API-сервиса (Root Directory = backend)
+# Сервис telegram-bot должен использовать railway.bot.toml (см. docs/STAGE4_TELEGRAM_BOT.md)
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
