@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# На проде Caddy подставляет Host запроса (см. Caddyfile).
+# Этот файл — запасной вариант для локальной раздачи без Caddy.
+Sitemap: https://mrboka.com/sitemap.xml

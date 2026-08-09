@@ -25,6 +25,7 @@ from aiogram.client.default import DefaultBotProperties  # noqa: E402
 from aiogram.enums import ParseMode  # noqa: E402
 
 from bot.handlers import router  # noqa: E402
+from bot.reminder_loop import reminder_loop  # noqa: E402
 from bot.staff_handlers import router as staff_router  # noqa: E402
 
 
@@ -54,7 +55,20 @@ async def main() -> None:
 
     # Сбрасываем webhook, иначе long polling не получает сообщения
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+
+    # Напоминания 24h / 2h в том же процессе, что и polling
+    reminders_task = asyncio.create_task(
+        reminder_loop(bot),
+        name="booking-reminders",
+    )
+    try:
+        await dp.start_polling(bot)
+    finally:
+        reminders_task.cancel()
+        try:
+            await reminders_task
+        except asyncio.CancelledError:
+            pass
 
 
 if __name__ == "__main__":

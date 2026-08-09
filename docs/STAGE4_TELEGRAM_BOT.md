@@ -17,10 +17,24 @@
 | Viktoria, Iwona (`therapist`) | **только свои** брони |
 | Boris, Jan (`superuser`) | **все** брони, группы по behandlare |
 
-1. `/start` → приветствие + **Visa aktuella bokningar**
-2. Список: `pending` (⏳) и `confirmed` (✅), ещё не прошедшие
+1. `/start` → приветствие + **Visa aktuella bokningar** + **Radera bokning**
+2. Список: сначала `confirmed` (✅), затем `pending` (⏳), ещё не прошедшие
 3. Кнопки всегда: **Telegram** + **E-post**  
    (если у клиента нет Telegram — кнопка объясняет это во всплывающем окне)
+4. **Radera bokning** → выбрать кнопкой → подтвердить → строка **удаляется из БД**  
+   (therapist — только свои; superuser — любые актуальные)
+
+### Автонапоминания (24 h и 2 h)
+
+Фоновый цикл в процессе бота (раз в ~60 с, Europe/Stockholm):
+
+- Брони `pending` и `confirmed` (в тексте статус явно)
+- За **≤ 24 ч** (и ещё **> 2 ч**) → напоминание всем активным staff + клиенту (если есть `telegram_id`)
+- За **≤ 2 ч** → второе напоминание
+- Флаги `reminder_24h_sent_at` / `reminder_2h_sent_at` на `bookings` — без дублей
+- `telegram_id` клиента сохраняется при **Bekräfta i Telegram**
+
+Миграция: `20260809_0005` (деплой API с alembic).
 
 ### Подтверждение без Telegram (e-post)
 

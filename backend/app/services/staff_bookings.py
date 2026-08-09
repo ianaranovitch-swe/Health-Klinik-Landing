@@ -9,7 +9,7 @@ from typing import assert_never
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Booking, BookingStatus, Therapist
@@ -77,6 +77,11 @@ def list_active_bookings_for_staff(
             Booking.booking_date >= today,
         )
         .order_by(
+            # Сначала confirmed, потом pending — так проще читать
+            case(
+                (Booking.status == BookingStatus.confirmed, 0),
+                else_=1,
+            ),
             Booking.booking_date.asc(),
             Booking.booking_time.asc(),
         )

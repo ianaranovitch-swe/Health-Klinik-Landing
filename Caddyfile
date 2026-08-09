@@ -19,7 +19,6 @@
 
 	root * /srv
 	encode gzip
-	file_server
 
 	# Не кэшируем HTML/JS/CSS надолго (Cloudflare иначе держит старую форму 4ч)
 	header Cache-Control "no-cache, must-revalidate"
@@ -29,7 +28,38 @@
 		respond "ok" 200
 	}
 
+	# robots.txt: реальные переносы строк (backticks), Sitemap на текущий Host
+	handle /robots.txt {
+		header Content-Type "text/plain; charset=utf-8"
+		respond `User-agent: *
+Allow: /
+
+Sitemap: https://{http.request.host}/sitemap.xml
+` 200
+	}
+
+	# Staging/Railway-хост не индексируем — canonical всегда указывает на прод
+	@not_prod {
+		not host mrboka.com www.mrboka.com
+	}
+	header @not_prod X-Robots-Tag "noindex, nofollow"
+
+	# sitemap: только корень без #фрагментов; Host из запроса
+	handle /sitemap.xml {
+		header Content-Type "application/xml; charset=utf-8"
+		respond `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://{http.request.host}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+` 200
+	}
+
 	handle {
 		try_files {path} /index.html
+		file_server
 	}
 }

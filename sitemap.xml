@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!--
+    Только канонический URL страницы (без #якорей — поисковики их не индексируют).
+    На проде Caddy отдаёт этот же смысл с Host запроса (см. Caddyfile).
+    Добавляй сюда отдельные страницы, когда они появятся (/priser/, /kontakt/ и т.д.).
+  -->
+  <url>
+    <loc>https://mrboka.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date, datetime, time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Time, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -54,6 +54,13 @@ class Booking(Base):
         unique=True,
         index=True,
         default=uuid.uuid4,
+    )
+    # Когда бот уже отправил напоминание (чтобы не дублировать)
+    reminder_24h_sent_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    reminder_2h_sent_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     client: Mapped[Client] = relationship(back_populates="bookings")
