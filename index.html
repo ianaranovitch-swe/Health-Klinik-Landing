@@ -73,7 +73,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260810a">
+    <link rel="stylesheet" href="style.css?v=20260810d">
 </head>
 <!--
   data-api-base:
@@ -324,7 +324,8 @@
                     <div class="team-body">
                         <h3>Iwona Aranovitch</h3>
                         <p class="team-role">Monicor &amp; Alfa</p>
-                        <p>Din resa mot balans, kraft och klarhet. Jag heter Iwona Aranovitch och har över 30 års erfarenhet inom förebyggande och hälsofrämjande verksamhet. Mitt engagemang för välmående är djupt rotat i gemensamt arbete med min man Boris Aranovich och företaget Människans Resurser AB – en verksamhet som jag har varit med och utvecklat sedan starten och som är nära sammanflätad med mitt mångåriga arbete inom energibaserade metoder.</p>
+                        <p class="team-tagline">Din resa mot balans, kraft och klarhet.</p>
+                        <p>Jag heter Iwona Aranovitch och har över 30 års erfarenhet inom förebyggande och hälsofrämjande verksamhet. Mitt engagemang för välmående är djupt rotat i gemensamt arbete med min man Boris Aranovich och företaget Människans Resurser AB – en verksamhet som jag har varit med och utvecklat sedan starten och som är nära sammanflätad med mitt mångåriga arbete inom energibaserade metoder.</p>
                         <p>Ge dig själv utrymme för återhämtning och läkning.</p>
                         <ul class="team-methods">
                             <li>Monicor</li>
@@ -611,13 +612,103 @@
     <!-- Новый файл = обход кэша Cloudflare со старым booking.js -->
     <script src="booking-form.js?v=20260807d" defer></script>
     <script>
-        // Popup «Läs mer» för behandlare (native <dialog>)
+        // Popup «Läs mer» — centrerad över behandlarens korta text
         (function () {
+            function resolveTextAnchor(anchor) {
+                // Вертикаль: короткий текст (tagline → body), без фото карточки
+                var body = anchor.closest(".team-body");
+                if (body) {
+                    return body.querySelector(".team-tagline") || body;
+                }
+                return anchor.closest(".team-member") || anchor;
+            }
+
+            function resolveHorizontalAnchor(anchor) {
+                // Горизонталь: колонка карточки (полная ширина), не «узкая» строка текста
+                return (
+                    anchor.closest(".team-body") ||
+                    anchor.closest(".team-member") ||
+                    anchor
+                );
+            }
+
+            function applyDialogPosition(dialog, anchor) {
+                var verticalTarget = resolveTextAnchor(anchor);
+                var horizontalTarget = resolveHorizontalAnchor(anchor);
+                var vRect = verticalTarget.getBoundingClientRect();
+                var hRect = horizontalTarget.getBoundingClientRect();
+                var panel = dialog.querySelector(".therapist-dialog-panel");
+                if (!panel) return;
+
+                var pad = 16;
+                var cssCap = 36 * 16;
+                var maxW = Math.min(32 * 16, window.innerWidth - pad * 2);
+                panel.style.width = maxW + "px";
+                panel.style.maxWidth = maxW + "px";
+
+                // Сначала maxHeight, потом измеряем dh — иначе clamp по «высокой» оценке врёт
+                var preferredTop = Math.max(pad, vRect.top);
+                var maxH = Math.min(cssCap, window.innerHeight - preferredTop - pad);
+                if (maxH < 8 * 16) {
+                    // Мало места под якорем — дать панели высоту от верха экрана
+                    preferredTop = pad;
+                    maxH = Math.min(cssCap, window.innerHeight - pad * 2);
+                }
+                panel.style.maxHeight = maxH + "px";
+
+                var dw = panel.offsetWidth || maxW;
+                var dh = panel.offsetHeight || Math.min(320, maxH);
+
+                // Центр панели = центр колонки (не вычитание от узкого tagline)
+                var left = hRect.left + hRect.width / 2 - dw / 2;
+                left = Math.max(pad, Math.min(left, window.innerWidth - dw - pad));
+
+                var top = Math.max(
+                    pad,
+                    Math.min(preferredTop, window.innerHeight - dh - pad)
+                );
+
+                // После сдвига top — синхронизировать maxHeight с реальным местом
+                maxH = Math.min(cssCap, window.innerHeight - top - pad);
+                panel.style.maxHeight = maxH + "px";
+                dh = panel.offsetHeight || Math.min(320, maxH);
+                top = Math.max(pad, Math.min(top, window.innerHeight - dh - pad));
+
+                panel.style.left = left + "px";
+                panel.style.top = top + "px";
+            }
+
+            function placeDialogOverAnchor(dialog, anchor) {
+                var panel = dialog.querySelector(".therapist-dialog-panel");
+                if (panel) {
+                    panel.style.left = "16px";
+                    panel.style.top = "16px";
+                }
+                applyDialogPosition(dialog, anchor);
+                if (typeof dialog.showModal === "function" && !dialog.open) {
+                    dialog.showModal();
+                }
+                // После top layer — пересчитать по реальным размерам панели
+                requestAnimationFrame(function () {
+                    applyDialogPosition(dialog, anchor);
+                });
+            }
+
+            function isClickOutsidePanel(event, panel) {
+                var r = panel.getBoundingClientRect();
+                return (
+                    event.clientX < r.left ||
+                    event.clientX > r.right ||
+                    event.clientY < r.top ||
+                    event.clientY > r.bottom
+                );
+            }
+
             document.querySelectorAll("[data-dialog]").forEach(function (btn) {
                 btn.addEventListener("click", function () {
                     var el = document.getElementById(btn.getAttribute("data-dialog"));
                     if (el && typeof el.showModal === "function") {
-                        el.showModal();
+                        placeDialogOverAnchor(el, btn);
                     }
                 });
             });
@@ -629,7 +720,11 @@
             });
             document.querySelectorAll("dialog.therapist-dialog").forEach(function (dialog) {
                 dialog.addEventListener("click", function (event) {
-                    if (event.target === dialog) dialog.close();
+                    var panel = dialog.querySelector(".therapist-dialog-panel");
+                    // Клик по затемнению / пустому dialog — не по содержимому панели
+                    if (!panel || isClickOutsidePanel(event, panel)) {
+                        dialog.close();
+                    }
                 });
             });
         })();

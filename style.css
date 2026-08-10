@@ -568,6 +568,17 @@ a {
     line-height: 1.65;
 }
 
+/* Специфичность выше, чем у .team-body > p — иначе цвет/line-height перебиваются */
+.team-body > p.team-tagline {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.2vw, 1.35rem);
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.35;
+    margin: 0 0 1rem;
+}
+
 .team-methods {
     list-style: none;
     display: flex;
@@ -612,9 +623,24 @@ a {
 .therapist-dialog {
     border: none;
     padding: 0;
-    max-width: min(32rem, calc(100vw - 2rem));
+    /* На весь viewport — клики «мимо панели» попадают в dialog, не только в ::backdrop */
+    margin: 0;
+    position: fixed;
+    inset: 0;
     width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
     background: transparent;
+    overflow: hidden;
+}
+
+.therapist-dialog:not([open]) {
+    display: none;
+}
+
+.therapist-dialog[open] {
+    display: block;
 }
 
 .therapist-dialog::backdrop {
@@ -622,7 +648,9 @@ a {
 }
 
 .therapist-dialog-panel {
-    position: relative;
+    position: fixed;
+    box-sizing: border-box;
+    width: min(32rem, calc(100vw - 2rem));
     background: var(--bg-warm);
     border: 1px solid rgba(26, 95, 74, 0.18);
     border-radius: 4px;
