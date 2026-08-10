@@ -73,7 +73,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260808b">
+    <link rel="stylesheet" href="style.css?v=20260810a">
 </head>
 <!--
   data-api-base:
@@ -304,7 +304,7 @@
         </div>
     </section>
 
-    <!-- SEKTION – BEHANDLARE (placeholders tills foto/info kommer) -->
+    <!-- SEKTION – BEHANDLARE -->
     <section class="section" id="behandlare">
         <div class="container">
             <div class="section-header">
@@ -313,18 +313,31 @@
             </div>
             <div class="team-grid">
                 <article class="team-member">
-                    <div class="team-photo team-photo-placeholder" aria-hidden="true">
-                        <span>IA</span>
-                    </div>
+                    <img
+                        class="team-photo"
+                        src="bilder/Iwona.jpg"
+                        width="480"
+                        height="600"
+                        alt="Iwona Aranovitch, behandlare"
+                        loading="lazy"
+                    >
                     <div class="team-body">
                         <h3>Iwona Aranovitch</h3>
                         <p class="team-role">Monicor &amp; Alfa</p>
-                        <p>Iwona tar emot dig för undersökningar med Monicor och Alfa. Hon hjälper dig tolka kroppens signaler kring energi, frekvensbalans och nervsystem – med lugnt och personligt bemötande.</p>
+                        <p>Din resa mot balans, kraft och klarhet. Jag heter Iwona Aranovitch och har över 30 års erfarenhet inom förebyggande och hälsofrämjande verksamhet. Mitt engagemang för välmående är djupt rotat i gemensamt arbete med min man Boris Aranovich och företaget Människans Resurser AB – en verksamhet som jag har varit med och utvecklat sedan starten och som är nära sammanflätad med mitt mångåriga arbete inom energibaserade metoder.</p>
+                        <p>Ge dig själv utrymme för återhämtning och läkning.</p>
                         <ul class="team-methods">
                             <li>Monicor</li>
                             <li>Alfa</li>
                         </ul>
-                        <p class="team-note">Foto och mer detaljerad presentation kommer snart.</p>
+                        <button
+                            type="button"
+                            class="team-more"
+                            data-dialog="iwona-mer"
+                            aria-haspopup="dialog"
+                        >
+                            Läs mer om Iwona
+                        </button>
                     </div>
                 </article>
                 <article class="team-member">
@@ -346,6 +359,21 @@
             </div>
         </div>
     </section>
+
+    <dialog id="iwona-mer" class="therapist-dialog" aria-labelledby="iwona-mer-title">
+        <div class="therapist-dialog-panel">
+            <button type="button" class="therapist-dialog-close" data-close-dialog aria-label="Stäng">
+                ×
+            </button>
+            <h3 id="iwona-mer-title">Mer om Iwona</h3>
+            <div class="therapist-dialog-body">
+                <p>Hos IwonA’s får du landa i en trygg och omsorgsfull miljö där kroppens egen visdom står i centrum. Jag erbjuder djupgående behandlingar i en stillsam atmosfär, där fokus ligger på din personliga återhämtning, balans och inre styrka.</p>
+                <h4>Terapier för din hälsa och läkning</h4>
+                <p>Jag arbetar med frekvens- och bioenergiterapi samt reiki healing och intuitivt kanaliserad konst. Dessa kraftfulla metoder hjälper din kropp att effektivt återställa sin naturliga balans, finna ett djupt lugn och aktivera sin egen inneboende läkningsförmåga.</p>
+                <p>Varje människa är unik, och därför formas varje enskild behandling helt intuitivt utifrån vad just du behöver i stunden. Jag möter dig alltid med full närvaro, stor lyhördhet och djup respekt för hela dig och din livssituation.</p>
+            </div>
+        </div>
+    </dialog>
 
     <!-- SEKTION – PRISER -->
     <section class="section" id="priser">
@@ -582,5 +610,29 @@
 
     <!-- Новый файл = обход кэша Cloudflare со старым booking.js -->
     <script src="booking-form.js?v=20260807d" defer></script>
+    <script>
+        // Popup «Läs mer» för behandlare (native <dialog>)
+        (function () {
+            document.querySelectorAll("[data-dialog]").forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var el = document.getElementById(btn.getAttribute("data-dialog"));
+                    if (el && typeof el.showModal === "function") {
+                        el.showModal();
+                    }
+                });
+            });
+            document.querySelectorAll("[data-close-dialog]").forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var dialog = btn.closest("dialog");
+                    if (dialog) dialog.close();
+                });
+            });
+            document.querySelectorAll("dialog.therapist-dialog").forEach(function (dialog) {
+                dialog.addEventListener("click", function (event) {
+                    if (event.target === dialog) dialog.close();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
