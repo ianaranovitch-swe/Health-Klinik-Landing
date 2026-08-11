@@ -9,6 +9,8 @@ from html import escape
 
 import resend
 
+from app.services.client_email import is_synthetic_client_email
+
 logger = logging.getLogger(__name__)
 
 # Отправитель после верификации домена в Resend
@@ -243,4 +245,162 @@ def notify_booking_created(
         to=therapist_email,
         subject=f"Ny bokning — {client_name}",
         html=therapist_html,
+    )
+
+
+def render_client_confirmed_booking_email(
+    *,
+    client_name: str,
+    therapist_name: str,
+    service_name: str,
+    booking_date: date,
+    booking_time: time,
+) -> str:
+    """HTML клиенту: бронь уже подтверждена (Telegram-flow)."""
+    when = f"{booking_date.isoformat()} kl. {booking_time.strftime('%H:%M')}"
+    name = escape(client_name)
+    therapist = escape(therapist_name)
+    service = escape(service_name)
+
+    return f"""<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><title>Din bokning är bekräftad</title></head>
+<body style="margin:0;padding:0;background:#f7f5f1;font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f5f1;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4e2dc;">
+        <tr>
+          <td style="background:#1a5f4a;padding:24px 28px;">
+            <p style="margin:0;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#e0c040;">Människans Resurser</p>
+            <h1 style="margin:8px 0 0;font-size:24px;line-height:1.3;color:#ffffff;">Din bokning är bekräftad ✅</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px;">
+            <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">Hej {name}!</p>
+            <p style="margin:0 0 20px;font-size:16px;line-height:1.6;">
+              Tack! Din tid är bekräftad. Vi ser fram emot att träffa dig.
+            </p>
+            <table role="presentation" width="100%" style="background:#eef6f2;border-radius:12px;margin-bottom:24px;">
+              <tr><td style="padding:18px 20px;font-size:15px;line-height:1.7;">
+                <strong>Behandlare:</strong> {therapist}<br>
+                <strong>Tjänst:</strong> {service}<br>
+                <strong>Tid:</strong> {when}
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px 24px;font-size:12px;color:#7a7a8a;border-top:1px solid #e4e2dc;">
+            Människans Resurser · mrboka.com · mail@mr-ab.se · 08-33 49 08
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
+def render_therapist_confirmed_booking_email(
+    *,
+    client_name: str,
+    client_phone: str,
+    client_email: str,
+    therapist_name: str,
+    service_name: str,
+    booking_date: date,
+    booking_time: time,
+) -> str:
+    """HTML терапевту: бронь уже подтверждена (Telegram-flow)."""
+    when = f"{booking_date.isoformat()} kl. {booking_time.strftime('%H:%M')}"
+    name = escape(client_name)
+    phone = escape(client_phone)
+    email = escape(client_email)
+    therapist = escape(therapist_name)
+    service = escape(service_name)
+
+    return f"""<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><title>Ny bekräftad bokning</title></head>
+<body style="margin:0;padding:0;background:#f7f5f1;font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f5f1;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e4e2dc;">
+        <tr>
+          <td style="background:#0d3d2f;padding:24px 28px;">
+            <p style="margin:0;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#e0c040;">Ny bokning</p>
+            <h1 style="margin:8px 0 0;font-size:24px;line-height:1.3;color:#ffffff;">Bekräftad via Telegram ✅</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px;">
+            <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">
+              Hej {therapist}! En ny bokning har bekräftats.
+            </p>
+            <table role="presentation" width="100%" style="background:#eef6f2;border-radius:12px;margin-bottom:20px;">
+              <tr><td style="padding:18px 20px;font-size:15px;line-height:1.7;">
+                <strong>Klient:</strong> {name}<br>
+                <strong>Telefon:</strong> {phone}<br>
+                <strong>E-post:</strong> {email}<br>
+                <strong>Tjänst:</strong> {service}<br>
+                <strong>Tid:</strong> {when}<br>
+                <strong>Status:</strong> confirmed
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px 24px;font-size:12px;color:#7a7a8a;border-top:1px solid #e4e2dc;">
+            Automatiskt meddelande från mrboka.com
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
+def notify_telegram_booking_confirmed(
+    *,
+    client_name: str,
+    client_email: str,
+    client_phone: str,
+    therapist_name: str,
+    therapist_email: str,
+    service_name: str,
+    booking_date: date,
+    booking_time: time,
+) -> None:
+    """Письма после брони через Telegram (статус уже confirmed)."""
+    therapist_html = render_therapist_confirmed_booking_email(
+        client_name=client_name,
+        client_phone=client_phone,
+        client_email=client_email,
+        therapist_name=therapist_name,
+        service_name=service_name,
+        booking_date=booking_date,
+        booking_time=booking_time,
+    )
+    send_email(
+        to=therapist_email,
+        subject=f"Ny bekräftad bokning — {client_name}",
+        html=therapist_html,
+    )
+
+    if is_synthetic_client_email(client_email):
+        return
+
+    client_html = render_client_confirmed_booking_email(
+        client_name=client_name,
+        therapist_name=therapist_name,
+        service_name=service_name,
+        booking_date=booking_date,
+        booking_time=booking_time,
+    )
+    send_email(
+        to=client_email,
+        subject=f"Din bokning är bekräftad — {service_name}",
+        html=client_html,
     )

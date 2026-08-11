@@ -23,7 +23,9 @@ if str(_BACKEND_DIR) not in sys.path:
 from aiogram import Bot, Dispatcher  # noqa: E402
 from aiogram.client.default import DefaultBotProperties  # noqa: E402
 from aiogram.enums import ParseMode  # noqa: E402
+from aiogram.fsm.storage.memory import MemoryStorage  # noqa: E402
 
+from bot.client_booking.handlers import router as client_booking_router  # noqa: E402
 from bot.handlers import router  # noqa: E402
 from bot.reminder_loop import reminder_loop  # noqa: E402
 from bot.staff_handlers import router as staff_router  # noqa: E402
@@ -46,8 +48,9 @@ async def main() -> None:
         token=token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher()
+    dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(router)
+    dp.include_router(client_booking_router)
     dp.include_router(staff_router)
 
     me = await bot.get_me()

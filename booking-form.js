@@ -457,5 +457,16 @@
     }
   });
 
+  function initTelegramBookingLink() {
+    const link = document.getElementById("booking-via-telegram");
+    if (!link) return;
+    const raw = (document.body.getAttribute("data-bot-username") || "mr_bokning_bot").trim();
+    const username = raw.replace(/^@/, "");
+    if (username) {
+      link.href = `https://t.me/${username}`;
+    }
+  }
+
+  initTelegramBookingLink();
   init();
 })();

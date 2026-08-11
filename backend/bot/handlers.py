@@ -6,42 +6,34 @@ import logging
 
 from aiogram import Bot, Router
 from aiogram.filters import CommandObject, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.db import get_session_factory
 from app.services.booking_confirm import confirm_booking_by_payload
 from app.services.staff_access import get_active_staff_by_telegram_id
+from bot.client_booking.handlers import start_client_booking
 from bot.staff_handlers import send_staff_welcome
+from bot.therapist_notify import notify_therapist_confirmed_booking
 
 logger = logging.getLogger(__name__)
 
 router = Router(name="booking")
 
-# Заглушки из seed/.env.example — на них нельзя слать сообщения
-PLACEHOLDER_TELEGRAM_IDS = frozenset(
-    {
-        2000000001,  # SEED_IWONA_TELEGRAM_ID по умолчанию
-        123456789,  # старый демо-id
-    }
-)
-
-
-def _is_notifiable_telegram_id(telegram_id: int | None) -> bool:
-    """True только для похожего на реальный user id (не seed-заглушка)."""
-    if telegram_id is None or telegram_id <= 0:
-        return False
-    return telegram_id not in PLACEHOLDER_TELEGRAM_IDS
-
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
+async def cmd_start(
+    message: Message,
+    command: CommandObject,
+    bot: Bot,
+    state: FSMContext,
+) -> None:
     """
-    /start — приветствие (клиент или staff)
-    /start confirm_<uuid> — подтверждение брони с сайта
+    /start — staff-meny, guidad klientbokning eller confirm_<uuid> från webben
     """
     args = (command.args or "").strip()
 
-    # Приветствие без payload — staff или клиент
+    # Приветствие без payload — staff или guidad bokning
     if not args:
         try:
             user = message.from_user
@@ -55,11 +47,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
                 finally:
                     session.close()
 
-            await message.answer(
-                "Hej! Jag är bokningsboten för Människans Resurser.\n\n"
-                "När du bokat tid på webbplatsen, tryck på knappen "
-                "«Bekräfta i Telegram» i bekräftelsen — då syns din tid här."
-            )
+            await start_client_booking(message, state)
         except Exception:
             logger.exception("Не удалось отправить приветствие /start")
         return
@@ -79,33 +67,18 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
 
         await message.answer(result.message_sv)
 
-        # Уведомление терапевту (если telegram_id не заглушка)
         if (
             result.ok
             and result.booking is not None
             and result.therapist is not None
             and result.client is not None
         ):
-            therapist_tg = result.therapist.telegram_id
-            if _is_notifiable_telegram_id(therapist_tg):
-                try:
-                    time_label = result.booking.booking_time.strftime("%H:%M")
-                    text = (
-                        "Ny bokning bekräftad ✅\n\n"
-                        f"Klient: {result.client.name}\n"
-                        f"Telefon: {result.client.phone}\n"
-                        f"E-post: {result.client.email}\n"
-                        f"Tjänst: {result.booking.service_name}\n"
-                        f"Datum: {result.booking.booking_date.isoformat()} "
-                        f"kl. {time_label}\n"
-                        f"Behandlare: {result.therapist.name}"
-                    )
-                    await bot.send_message(chat_id=therapist_tg, text=text)
-                except Exception:
-                    logger.exception(
-                        "Не удалось уведомить терапевта telegram_id=%s",
-                        therapist_tg,
-                    )
+            await notify_therapist_confirmed_booking(
+                bot,
+                booking=result.booking,
+                client=result.client,
+                therapist=result.therapist,
+            )
     except Exception:
         logger.exception("Ошибка подтверждения брони (args=%r)", command.args)
         try:

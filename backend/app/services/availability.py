@@ -10,6 +10,9 @@ WEEKDAY_END = time(18, 0)
 FRIDAY_END = time(17, 0)
 SLOT_STEP = timedelta(minutes=30)
 
+# Сколько дней вперёд показывать в боте и на сайте
+DEFAULT_BOOKING_DAYS_AHEAD = 28
+
 
 def generate_time_slots(on_date: date) -> list[str]:
     """
@@ -29,3 +32,18 @@ def generate_time_slots(on_date: date) -> list[str]:
         slots.append(current.strftime("%H:%M"))
         current += SLOT_STEP
     return slots
+
+
+def list_open_booking_dates(
+    *,
+    from_date: date | None = None,
+    days_ahead: int = DEFAULT_BOOKING_DAYS_AHEAD,
+) -> list[date]:
+    """Ближайшие рабочие дни (пн–пт), когда есть хотя бы один слот."""
+    start = from_date or date.today()
+    result: list[date] = []
+    for offset in range(days_ahead):
+        day = start + timedelta(days=offset)
+        if generate_time_slots(day):
+            result.append(day)
+    return result

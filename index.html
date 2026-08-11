@@ -73,7 +73,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260810d">
+    <link rel="stylesheet" href="style.css?v=20260811a">
 </head>
 <!--
   data-api-base:
@@ -81,7 +81,7 @@
     mrboka.com → URL из booking.js (PROD_API_BASE); иначе same-origin
   - явный URL — только если нужен другой API-хост (без /health, без слэша в конце)
 -->
-<body data-api-base="auto">
+<body data-api-base="auto" data-bot-username="mr_bokning_bot">
 
     <!-- Навигация -->
     <nav class="nav">
@@ -519,6 +519,17 @@
         <div class="container narrow">
             <h2>Ge din kropp uppmärksamheten den förtjänar</h2>
             <p>Boka en tid och välj den undersökning eller det paket som passar dig. Öppet för bokning mån–tors 11–18 och fredag 11–17.</p>
+
+            <div class="booking-telegram-alt">
+                <p class="booking-telegram-lead">Vill du boka snabbare? Med vår Telegram-bot bokar du din tid på under en minut — svara bara på några enkla frågor.</p>
+                <a
+                    id="booking-via-telegram"
+                    class="btn-secondary booking-telegram-btn"
+                    href="https://t.me/mr_bokning_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >Boka via Telegram</a>
+            </div>
 
             <div id="booking-form-panel" class="booking-panel">
                 <form id="booking-form" class="booking-form" novalidate>
