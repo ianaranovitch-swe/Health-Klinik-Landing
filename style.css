@@ -510,6 +510,22 @@ a {
     max-width: 40rem;
 }
 
+.method-more {
+    margin: 1.25rem 0 0;
+}
+
+.method-more a {
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.method-more a:hover,
+.method-more a:focus-visible {
+    color: var(--primary);
+}
+
 /* Behandlare */
 .team-grid {
     display: grid;
