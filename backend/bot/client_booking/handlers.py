@@ -265,7 +265,7 @@ async def on_time(callback: CallbackQuery, callback_data: BookingCb, state: FSMC
     if callback.message is None:
         return
 
-    await state.update_data(time=callback_data.value)
+    await state.update_data(time=callback_data.value.replace("-", ":"))
     await state.set_state(ClientBooking.phone)
     phone_step = "phone_staff" if await _is_staff_booking(state) else "phone"
     await send_step(callback.message, phone_step)

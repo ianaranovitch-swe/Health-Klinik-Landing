@@ -68,13 +68,17 @@ def dates_keyboard(
 
 
 def times_keyboard(slots: list[str]) -> InlineKeyboardMarkup:
+    # В callback_data нельзя «:» (aiogram Separator) — храним 11-00, на кнопке 11:00
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
     for slot in slots:
         row.append(
             InlineKeyboardButton(
                 text=slot,
-                callback_data=BookingCb(step="time", value=slot).pack(),
+                callback_data=BookingCb(
+                    step="time",
+                    value=slot.replace(":", "-"),
+                ).pack(),
             )
         )
         if len(row) >= 3:

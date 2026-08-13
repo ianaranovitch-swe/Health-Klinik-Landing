@@ -11,6 +11,7 @@ from app.services.availability import (
 )
 from app.services.client_email import is_synthetic_client_email
 from bot.client_booking.flow import format_summary, is_valid_email, is_valid_name, normalize_phone
+from bot.client_booking.keyboards import BookingCb, times_keyboard
 
 
 def test_synthetic_email_hidden_from_summary() -> None:
@@ -69,3 +70,18 @@ def test_name_and_email_validation() -> None:
     assert not is_valid_name("A")
     assert is_valid_email("anna@test.se")
     assert not is_valid_email("not-an-email")
+
+
+def test_times_keyboard_packs_without_colon() -> None:
+    """aiogram CallbackData запрещает «:» в value — слоты кодируем как 11-00."""
+    slots = generate_time_slots(date(2026, 8, 14))  # пятница
+    assert slots
+    kb = times_keyboard(slots)
+    flat = [btn for row in kb.inline_keyboard for btn in row]
+    assert len(flat) == len(slots)
+    for btn, slot in zip(flat, slots, strict=True):
+        assert btn.text == slot
+        unpacked = BookingCb.unpack(btn.callback_data)
+        assert unpacked.step == "time"
+        assert ":" not in unpacked.value
+        assert unpacked.value.replace("-", ":") == slot
