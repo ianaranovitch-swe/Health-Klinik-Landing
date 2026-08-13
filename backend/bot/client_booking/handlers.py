@@ -42,8 +42,11 @@ from bot.client_booking.texts import (
     BOOKING_ERROR,
     CANCELLED_TEXT,
     INVALID_EMAIL,
+    INVALID_EMAIL_STAFF,
     INVALID_NAME,
+    INVALID_NAME_STAFF,
     INVALID_PHONE,
+    STAFF_BOOKING_INTRO,
 )
 from bot.states.client_booking import ClientBooking
 from bot.therapist_notify import notify_therapist_confirmed_booking
@@ -64,6 +67,20 @@ async def start_client_booking(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(ClientBooking.name)
     await send_step(message, "name")
+
+
+async def start_staff_client_booking(message: Message, state: FSMContext) -> None:
+    """Staff bokar åt klient — pending + e-postbekräftelse (som webbformulär)."""
+    await state.clear()
+    await state.update_data(booked_by_staff=True)
+    await state.set_state(ClientBooking.name)
+    await message.answer(STAFF_BOOKING_INTRO)
+    await send_step(message, "name_staff")
+
+
+async def _is_staff_booking(state: FSMContext) -> bool:
+    data = await state.get_data()
+    return bool(data.get("booked_by_staff"))
 
 
 async def _go_to_date_step(message: Message, state: FSMContext) -> None:
@@ -119,6 +136,15 @@ async def _go_to_optional_email(message: Message, state: FSMContext) -> None:
     await send_step(message, "optional_email", reply_markup=skip_email_keyboard())
 
 
+async def _go_to_required_email(message: Message, state: FSMContext) -> None:
+    """Staff-bokning: e-post obligatorisk (bekräftelselänk till klienten)."""
+    data = await state.get_data()
+    summary = format_summary(data)
+    await state.set_state(ClientBooking.optional_email)
+    await message.answer(summary)
+    await send_step(message, "email_staff")
+
+
 async def _go_to_confirm(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     summary = format_summary(data)
@@ -138,8 +164,9 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
 
 @router.message(StateFilter(ClientBooking.name), F.text)
 async def on_name(message: Message, state: FSMContext) -> None:
+    staff_mode = await _is_staff_booking(state)
     if not is_valid_name(message.text or ""):
-        await message.answer(INVALID_NAME)
+        await message.answer(INVALID_NAME_STAFF if staff_mode else INVALID_NAME)
         return
 
     await state.update_data(name=(message.text or "").strip())
@@ -240,7 +267,8 @@ async def on_time(callback: CallbackQuery, callback_data: BookingCb, state: FSMC
 
     await state.update_data(time=callback_data.value)
     await state.set_state(ClientBooking.phone)
-    await send_step(callback.message, "phone")
+    phone_step = "phone_staff" if await _is_staff_booking(state) else "phone"
+    await send_step(callback.message, phone_step)
 
 
 @router.message(StateFilter(ClientBooking.phone), F.text)
@@ -251,7 +279,10 @@ async def on_phone(message: Message, state: FSMContext) -> None:
         return
 
     await state.update_data(phone=phone)
-    await _go_to_optional_email(message, state)
+    if await _is_staff_booking(state):
+        await _go_to_required_email(message, state)
+    else:
+        await _go_to_optional_email(message, state)
 
 
 @router.callback_query(
@@ -261,6 +292,11 @@ async def on_phone(message: Message, state: FSMContext) -> None:
 async def on_skip_email(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     if callback.message is None:
+        return
+
+    # Staff måste ange e-post — hoppa över tillåts bara för klient
+    if await _is_staff_booking(state):
+        await callback.message.answer(INVALID_EMAIL_STAFF)
         return
 
     user = callback.from_user
@@ -273,8 +309,12 @@ async def on_skip_email(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(StateFilter(ClientBooking.optional_email), F.text)
 async def on_email(message: Message, state: FSMContext) -> None:
+    staff_mode = await _is_staff_booking(state)
     if not is_valid_email(message.text or ""):
-        await message.answer(INVALID_EMAIL, reply_markup=skip_email_keyboard())
+        if staff_mode:
+            await message.answer(INVALID_EMAIL_STAFF)
+        else:
+            await message.answer(INVALID_EMAIL, reply_markup=skip_email_keyboard())
         return
 
     await state.update_data(email=(message.text or "").strip().lower())
@@ -344,28 +384,33 @@ async def on_confirm_booking(
         time=booking_time,
     )
 
+    staff_mode = bool(data.get("booked_by_staff"))
     session = get_session_factory()()
     try:
         settings = get_settings()
-        result = create_booking(
-            session,
-            payload,
-            settings,
-            channel="telegram",
-            client_telegram_id=user.id,
-        )
-
-        booking = session.get(Booking, result.id)
-        client = session.get(Client, booking.client_id) if booking else None
-        therapist = session.get(Therapist, int(data["therapist_id"]))
-
-        if booking is not None and client is not None and therapist is not None:
-            await notify_therapist_confirmed_booking(
-                bot,
-                booking=booking,
-                client=client,
-                therapist=therapist,
+        if staff_mode:
+            # Som webbformulär: pending + e-post med Telegram- och e-postlänk
+            result = create_booking(session, payload, settings, channel="web")
+        else:
+            result = create_booking(
+                session,
+                payload,
+                settings,
+                channel="telegram",
+                client_telegram_id=user.id,
             )
+
+            booking = session.get(Booking, result.id)
+            client = session.get(Client, booking.client_id) if booking else None
+            therapist = session.get(Therapist, int(data["therapist_id"]))
+
+            if booking is not None and client is not None and therapist is not None:
+                await notify_therapist_confirmed_booking(
+                    bot,
+                    booking=booking,
+                    client=client,
+                    therapist=therapist,
+                )
     except ValueError as exc:
         logger.warning("Telegram-bokning misslyckades: %s", exc)
         await callback.message.answer(str(exc))
@@ -379,9 +424,20 @@ async def on_confirm_booking(
 
     await state.clear()
     time_label = data["time"]
-    await callback.message.answer(
-        "Din bokning är bekräftad ✅\n\n"
-        f"{data['service_name']} med {data['therapist_name']}\n"
-        f"{data['date']} kl. {time_label}\n\n"
-        "Vi ser fram emot att träffa dig!"
-    )
+    if staff_mode:
+        await callback.message.answer(
+            "Bokningen är skapad ✅\n\n"
+            f"Klient: {data['name']}\n"
+            f"{data['service_name']} med {data['therapist_name']}\n"
+            f"{data['date']} kl. {time_label}\n"
+            f"E-post: {data['email']}\n\n"
+            "Status: väntar på klientens bekräftelse.\n"
+            "Bekräftelselänk (Telegram + e-post) har skickats till klienten."
+        )
+    else:
+        await callback.message.answer(
+            "Din bokning är bekräftad ✅\n\n"
+            f"{data['service_name']} med {data['therapist_name']}\n"
+            f"{data['date']} kl. {time_label}\n\n"
+            "Vi ser fram emot att träffa dig!"
+        )

@@ -8,6 +8,7 @@ from typing import assert_never
 
 from aiogram import F, Router
 from aiogram.filters.callback_data import CallbackData
+from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -32,6 +33,7 @@ from app.services.staff_bookings import (
     mailto_url,
     telegram_user_url,
 )
+from bot.client_booking.handlers import start_staff_client_booking
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,12 @@ def staff_welcome_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text="📋 Visa aktuella bokningar",
                     callback_data=StaffCb(action="list").pack(),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🗓 Boka tid för klient",
+                    callback_data=StaffCb(action="book_client").pack(),
                 )
             ],
             [
@@ -182,10 +190,33 @@ async def send_staff_welcome(message: Message, staff: StaffMember) -> None:
         f"Hej {escape(_first_name(staff))}! 👋\n\n"
         f"{escape(_role_line_sv(staff))}\n\n"
         "• Visa bokningar (✅ bekräftade först, sedan ⏳ pending)\n"
+        "• Boka tid för klient (klienten bekräftar via e-post)\n"
         "• Radera bokning (tas bort helt från databasen)\n\n"
         "Du får också automatiska påminnelser 24 h och 2 h före tid."
     )
     await message.answer(text, reply_markup=staff_welcome_keyboard())
+
+
+@router.callback_query(StaffCb.filter(F.action == "book_client"))
+async def on_book_client(callback: CallbackQuery, state: FSMContext) -> None:
+    """Staff bokar åt klient — samma steg, men bekräftelse via e-post."""
+    user = callback.from_user
+    if user is None or callback.message is None:
+        await callback.answer()
+        return
+
+    session = get_session_factory()()
+    try:
+        staff = get_active_staff_by_telegram_id(session, user.id)
+    finally:
+        session.close()
+
+    if staff is None:
+        await callback.answer("Ingen behörighet.", show_alert=True)
+        return
+
+    await callback.answer()
+    await start_staff_client_booking(callback.message, state)
 
 
 @router.callback_query(StaffCb.filter(F.action == "no_tg"))

@@ -42,6 +42,7 @@ async def cmd_start(
                 try:
                     staff = get_active_staff_by_telegram_id(session, user.id)
                     if staff is not None:
+                        await state.clear()
                         await send_staff_welcome(message, staff)
                         return
                 finally:
